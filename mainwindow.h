@@ -7,7 +7,7 @@
 
 #include <QMainWindow>
 
-#include "terminalwidget.h"
+#include "qlightterminal.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -23,6 +23,6 @@ public:
 
 private:
     Ui::MainWindow *ui;
-    TerminalWidget* terminal;
+    QLightTerminal* terminal;
 };
 #endif // MAINWINDOW_H

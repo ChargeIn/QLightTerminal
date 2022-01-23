@@ -5,7 +5,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include"terminalwidget.h"
+#include"qlightterminal.h"
 
 #include <QDebug>
 
@@ -15,7 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    terminal = new TerminalWidget();
+    terminal = new QLightTerminal();
 
     this->setCentralWidget(terminal);
 }

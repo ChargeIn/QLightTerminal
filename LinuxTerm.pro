@@ -13,16 +13,19 @@ CONFIG += c++11
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
-    shell.cpp \
-    terminalwidget.cpp
+    qlightterminal.cpp \
+    st.cpp
 
 HEADERS += \
     mainwindow.h \
-    shell.h \
-    terminalwidget.h
+    qlightterminal.h \
+    st-utils.h \
+    st.h
 
 FORMS += \
     mainwindow.ui
+
+LIBS += -lutil
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
