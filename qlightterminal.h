@@ -5,12 +5,12 @@
 #ifndef QLIGHTTERMINAL_H
 #define QLIGHTTERMINAL_H
 
-#include <QPlainTextEdit>
+#include <QWidget>
 #include <QStringList>
 
 #include "st.h"
 
-class QLightTerminal : public QPlainTextEdit
+class QLightTerminal : public QWidget
 {
 public:
     QLightTerminal();
@@ -21,13 +21,13 @@ public slots:
 
 private:
     SimpleTerminal * st;
+    QString altView = QString();
 
-    /*
-     * Deletes the last line of the Terminal
-     */
-    void deleteLastLine();
+    void paintEvent(QPaintEvent *event) override;
+
 protected:
-    virtual void keyPressEvent(QKeyEvent *e) override;
+    virtual void keyPressEvent(QKeyEvent *event) override;
+    void  mousePressEvent ( QMouseEvent * event ) override;
 };
 
 #endif // QLIGHTTERMINAL_H

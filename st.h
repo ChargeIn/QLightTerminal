@@ -11,6 +11,8 @@ class SimpleTerminal: public QObject
 {
     Q_OBJECT
 public:
+    Term term;
+
     SimpleTerminal();
 
     void tnew(int col, int row);
@@ -31,6 +33,7 @@ public:
 
 public slots:
     size_t ttyread();
+
 signals:
     void s_error(QString);
 
@@ -45,8 +48,6 @@ private:
     int readBufSize = 0;
 
     QSocketNotifier* readNotifier;
-
-    Term term;
     Selection sel;
     CSIEscape csiescseq;
     STREscape strescseq;
