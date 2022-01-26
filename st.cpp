@@ -133,7 +133,8 @@ void SimpleTerminal::execsh()
     ::setenv("USER", pw->pw_name, 1);
     ::setenv("SHELL", shell, 1);
     ::setenv("HOME", pw->pw_dir, 1);
-    ::setenv("TERM", "QLightTerminal", 1);
+    // TODO figure out a way to use tic command with custom term info file
+    ::setenv("TERM", "xterm-256color", 1);
 
     char* args[] = {shell.data(), NULL, NULL};
 
@@ -349,6 +350,7 @@ check_control_code:
     } else if (term.esc & ESC_START) {
         if (term.esc & ESC_CSI) {
             csiescseq.buf[csiescseq.len++] = u;
+                    qDebug() << "control";
             if (BETWEEN(u, 0x40, 0x7E)
                     || csiescseq.len >= \
                     sizeof(csiescseq.buf)-1) {

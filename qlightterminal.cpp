@@ -58,20 +58,23 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
         }
         st->term.dirty[i] = 0;
 
-        Line base = st->term.line[0];
-
         line = QString();
-
-        if (IS_TRUECOL(base->fg)) {
-            painter.setPen(QColor(TRUERED(base->fg),TRUEGREEN(base->fg),TRUEBLUE(base->fg)));
-        } else {
-        }
 
         for(int j = 0; j < st->term.col; j++){
             if(st->term.line[i][j].u){
 
                 if(st->term.line[i][j].mode == ATTR_WDUMMY)
                         continue;
+
+                Glyph_ l =  st->term.line[i][j];
+
+                //qDebug() << l.bg << ' ' << l.fg << ' ' << l.mode << ' ' << QChar(l.u);
+
+                if (IS_TRUECOL(st->term.line[i][j].fg)) {
+                    painter.setPen(QColor(TRUERED(st->term.line[i][j].fg),TRUEGREEN(st->term.line[i][j].fg),TRUEBLUE(st->term.line[i][j].fg)));
+                } else {
+                }
+
                 line += QChar(st->term.line[i][j].u);
             }
         }
