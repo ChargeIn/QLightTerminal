@@ -17,6 +17,7 @@ SOURCES += \
     st.cpp
 
 HEADERS += \
+    colors.h \
     mainwindow.h \
     qlightterminal.h \
     st-utils.h \

@@ -14,7 +14,6 @@ class QLightTerminal : public QWidget
 {
 public:
     QLightTerminal();
-    ~QLightTerminal();
 
 public slots:
     void updateTerminal(Term* term);
@@ -22,8 +21,13 @@ public slots:
 private:
     SimpleTerminal * st;
     QString altView = QString();
+    QColor colors[260];
 
     void paintEvent(QPaintEvent *event) override;
+
+    void loadColors();
+
+    int sixd_to_16bit(int x);
 
 protected:
     virtual void keyPressEvent(QKeyEvent *event) override;

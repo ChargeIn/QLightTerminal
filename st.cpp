@@ -350,7 +350,6 @@ check_control_code:
     } else if (term.esc & ESC_START) {
         if (term.esc & ESC_CSI) {
             csiescseq.buf[csiescseq.len++] = u;
-                    qDebug() << "control";
             if (BETWEEN(u, 0x40, 0x7E)
                     || csiescseq.len >= \
                     sizeof(csiescseq.buf)-1) {
@@ -1810,7 +1809,7 @@ void SimpleTerminal::osc4_color_response(int num)
     unsigned char r, g, b;
 
     if (xgetcolor(num, &r, &g, &b)) {
-        emit s_error("erresc: failed to fetch osc4 color: " + QString::number(n));
+        emit s_error("erresc: failed to fetch osc4 color: " + QString::number(num));
         return;
     }
 
@@ -1892,6 +1891,151 @@ void SimpleTerminal::selsnap(int *x, int *y, int direction)
     }
 }
 
+void SimpleTerminal::tsetattr(const int *attr, int l)
+{
+    int i;
+    int32_t idx;
+
+    for (i = 0; i < l; i++) {
+        switch (attr[i]) {
+        case 0:
+            term.c.attr.mode &= ~(
+                ATTR_BOLD       |
+                ATTR_FAINT      |
+                ATTR_ITALIC     |
+                ATTR_UNDERLINE  |
+                ATTR_BLINK      |
+                ATTR_REVERSE    |
+                ATTR_INVISIBLE  |
+                ATTR_STRUCK     );
+            term.c.attr.fg = defaultfg;
+            term.c.attr.bg = defaultbg;
+            break;
+        case 1:
+            term.c.attr.mode |= ATTR_BOLD;
+            break;
+        case 2:
+            term.c.attr.mode |= ATTR_FAINT;
+            break;
+        case 3:
+            term.c.attr.mode |= ATTR_ITALIC;
+            break;
+        case 4:
+            term.c.attr.mode |= ATTR_UNDERLINE;
+            break;
+        case 5: /* slow blink */
+            /* FALLTHROUGH */
+        case 6: /* rapid blink */
+            term.c.attr.mode |= ATTR_BLINK;
+            break;
+        case 7:
+            term.c.attr.mode |= ATTR_REVERSE;
+            break;
+        case 8:
+            term.c.attr.mode |= ATTR_INVISIBLE;
+            break;
+        case 9:
+            term.c.attr.mode |= ATTR_STRUCK;
+            break;
+        case 22:
+            term.c.attr.mode &= ~(ATTR_BOLD | ATTR_FAINT);
+            break;
+        case 23:
+            term.c.attr.mode &= ~ATTR_ITALIC;
+            break;
+        case 24:
+            term.c.attr.mode &= ~ATTR_UNDERLINE;
+            break;
+        case 25:
+            term.c.attr.mode &= ~ATTR_BLINK;
+            break;
+        case 27:
+            term.c.attr.mode &= ~ATTR_REVERSE;
+            break;
+        case 28:
+            term.c.attr.mode &= ~ATTR_INVISIBLE;
+            break;
+        case 29:
+            term.c.attr.mode &= ~ATTR_STRUCK;
+            break;
+        case 38:
+            if ((idx = tdefcolor(attr, &i, l)) >= 0)
+                term.c.attr.fg = idx;
+            break;
+        case 39:
+            term.c.attr.fg = defaultfg;
+            break;
+        case 48:
+            if ((idx = tdefcolor(attr, &i, l)) >= 0)
+                term.c.attr.bg = idx;
+            break;
+        case 49:
+            term.c.attr.bg = defaultbg;
+            break;
+        default:
+            if (BETWEEN(attr[i], 30, 37)) {
+                term.c.attr.fg = attr[i] - 30;
+            } else if (BETWEEN(attr[i], 40, 47)) {
+                term.c.attr.bg = attr[i] - 40;
+            } else if (BETWEEN(attr[i], 90, 97)) {
+                term.c.attr.fg = attr[i] - 90 + 8;
+            } else if (BETWEEN(attr[i], 100, 107)) {
+                term.c.attr.bg = attr[i] - 100 + 8;
+            } else {
+                emit s_error("erresc(default): gfx attr " + QString::number(attr[i]) + " unknown.");
+                csidump();
+            }
+            break;
+        }
+    }
+}
+
+int32_t SimpleTerminal::tdefcolor(const int *attr, int *npar, int l)
+{
+    int32_t idx = -1;
+    uint r, g, b;
+
+    switch (attr[*npar + 1]) {
+    case 2: /* direct color in RGB space */
+        if (*npar + 4 >= l) {
+            emit s_error("erresc(38): Incorrect number of parameters " + QString::number(*npar));
+            break;
+        }
+        r = attr[*npar + 2];
+        g = attr[*npar + 3];
+        b = attr[*npar + 4];
+        *npar += 4;
+        if (!BETWEEN(r, 0, 255) || !BETWEEN(g, 0, 255) || !BETWEEN(b, 0, 255)) {
+            emit s_error("erresc: bad rgb color " + QString::number(r) + "," + QString::number(g) + "," + QString::number(b));
+        } else {
+
+            idx = TRUECOLOR(r, g, b);
+        }
+        break;
+    case 5: /* indexed color */
+        if (*npar + 2 >= l) {
+            emit s_error("erresc(38): Incorrect number of parameters " + QString::number(*npar));
+            break;
+        }
+        *npar += 2;
+        if (!BETWEEN(attr[*npar], 0, 255))
+            emit s_error("erresc: bad fgcolor " + QString::number(attr[*npar]));
+        else
+            idx = attr[*npar];
+        break;
+    case 0: /* implemented defined (only foreground) */
+    case 1: /* transparent */
+    case 3: /* direct color in CMY space */
+    case 4: /* direct color in CMYK space */
+    default:
+        emit s_error("erresc(38): gfx attr " + QString::number(attr[*npar]) + " unknown\n");
+        break;
+    }
+
+    return idx;
+}
+
+
 
 // ------------------------------ TODO ------------------------
 void SimpleTerminal::xsetsel(char *strvtiden)
@@ -1909,7 +2053,7 @@ void SimpleTerminal::xclipcopy(void)
 void SimpleTerminal::xseticontitle(char *p)
 {
     // TODO
-    qDebug() << "xseticontitle";
+    qDebug() << "xseticontitle: " << p;
 }
 
 void SimpleTerminal::draw(void)
@@ -1942,7 +2086,7 @@ void SimpleTerminal::xloadcols()
 
 void SimpleTerminal::xsettitle(char *p){
     // TODO
-    qDebug() << "xsettitle";
+    qDebug() << "xsettitle:"  << p ;
 }
 
 void SimpleTerminal::resettitle(void)
@@ -1969,14 +2113,6 @@ void SimpleTerminal::tsetmode(int priv, int set, const int *args, int narg)
     // TODO
     // add mode support
     qDebug() << "tsetmode";
-}
-
-
-void SimpleTerminal::tsetattr(const int *attr, int l)
-{
-    // TODO
-    // Support color changes
-    qDebug() << "tsetattr";
 }
 
 

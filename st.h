@@ -127,6 +127,8 @@ private:
     char base64dec_getc(const char **src);
     void osc4_color_response(int num);
     void selsnap(int *x, int *y, int direction);
+    void tsetattr(const int *attr, int l);
+    int32_t tdefcolor(const int *attr, int *npar, int l);
 
     // TODO
     void xsetsel(char *str);
@@ -140,7 +142,7 @@ private:
     void resettitle(void);
     void xsetmode(int set, unsigned int flags);
     int xsetcursor(int cursor);
-    void tsetattr(const int *attr, int l); // TODO
+
     void bell(void); // TODO
     void tprinter(char*s, size_t len); // TODO
     void tsetmode(int priv, int set, const int *args, int narg); // TODO

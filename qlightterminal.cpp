@@ -14,14 +14,12 @@
     #include <QDebug>
 #endif
 
-// Add a zero width space at the end to start the font
-#define TERM_PREFIX_FONT "<font color=\"#4fb4e1\">&#8203;<b>"
-#define TERM_OUTPUT_FONT "<font color=\"#144054\">&#8203;"
-#define USER_FONT "</b><font color=\"#ffffff\">&#8203;"
-#define CLOSE_FONT "</font>"
+#include "colors.h"
 
 QLightTerminal::QLightTerminal(): QWidget()
 {
+    loadColors();
+
     st = new SimpleTerminal();
 
     // setup default style
@@ -32,11 +30,43 @@ QLightTerminal::QLightTerminal(): QWidget()
     connect(st, &SimpleTerminal::updateView, this, &QLightTerminal::updateTerminal);
 }
 
-QLightTerminal::~QLightTerminal(){
+void QLightTerminal::updateTerminal(Term* term){
+    update();
 }
 
-void QLightTerminal::updateTerminal(Term* term){
-    this->update();
+void QLightTerminal::loadColors(){
+
+    for(int i = 0; i < 16; i++){
+        colors[i] = QColor(::colorname[i]);
+        qDebug() << colors[i];
+    }
+
+    for(int i = 16; i < 260; i++){
+
+        if (i < 6*6*6+16) { /* same colors as xterm */
+            colors[i] = QColor(
+                sixd_to_16bit( ((i-16)/36)%6 ),
+                sixd_to_16bit( ((i-16)/6) %6 ),
+                sixd_to_16bit( ((i-16)/1) %6 ),
+                0xffff
+            );
+        } else { /* greyscale */
+            int red =  0x0808 + 0x0a0a * (i - (6*6*6+16));
+            colors[i] = QColor(red,red,red, 0xffff);
+        }
+        qDebug() << colors[i];
+
+    }
+    for(int i = 0; i < 4; i++){
+        colors[256 + i] = QColor(::customcolors[i]);
+        qDebug() << colors[i];
+    }
+
+}
+
+int QLightTerminal::sixd_to_16bit(int x)
+{
+    return x == 0 ? 0 : 0x3737 + 0x2828 * x;
 }
 
 void QLightTerminal::paintEvent(QPaintEvent *event){
@@ -44,8 +74,6 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     int lineSpacing = this->fontMetrics().lineSpacing();
 
     QPainter painter(this);
-
-    painter.setPen(QColor(255,255,255));
 
     QString line;
 
@@ -73,6 +101,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
                 if (IS_TRUECOL(st->term.line[i][j].fg)) {
                     painter.setPen(QColor(TRUERED(st->term.line[i][j].fg),TRUEGREEN(st->term.line[i][j].fg),TRUEBLUE(st->term.line[i][j].fg)));
                 } else {
+                   painter.setPen(colors[st->term.line[i][j].fg]);
                 }
 
                 line += QChar(st->term.line[i][j].u);
