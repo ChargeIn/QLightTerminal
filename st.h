@@ -40,6 +40,8 @@ signals:
     void updateView(Term* state);
 
 private:
+    TermWindow win;
+
     int master, slave;
     pid_t processId;
 
@@ -56,10 +58,10 @@ private:
      * Default colors (colorname index)
      * foreground, background, cursor, reverse cursor
      */
-    unsigned int defaultfg = 258;
-    unsigned int defaultbg = 259;
     unsigned int defaultcs = 256;
     unsigned int defaultrcs = 257;
+    unsigned int defaultfg = 258;
+    unsigned int defaultbg = 259;
 
     const int tabspaces = 8;
 
@@ -129,6 +131,8 @@ private:
     void selsnap(int *x, int *y, int direction);
     void tsetattr(const int *attr, int l);
     int32_t tdefcolor(const int *attr, int *npar, int l);
+    void xsetmode(int set, unsigned int flags);
+    void tswapscreen(void);
 
     // TODO
     void xsetsel(char *str);
@@ -138,9 +142,7 @@ private:
     int xgetcolor(int x, unsigned char *r, unsigned char *g, unsigned char *b);
     void xsettitle(char *p);
     void xloadcols(void);
-    void tswapscreen(void);
     void resettitle(void);
-    void xsetmode(int set, unsigned int flags);
     int xsetcursor(int cursor);
 
     void bell(void); // TODO

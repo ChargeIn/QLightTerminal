@@ -14,12 +14,8 @@
     #include <QDebug>
 #endif
 
-#include "colors.h"
-
 QLightTerminal::QLightTerminal(): QWidget()
 {
-    loadColors();
-
     st = new SimpleTerminal();
 
     // setup default style
@@ -34,36 +30,6 @@ void QLightTerminal::updateTerminal(Term* term){
     update();
 }
 
-void QLightTerminal::loadColors(){
-
-    for(int i = 0; i < 16; i++){
-        colors[i] = QColor(::colorname[i]);
-        qDebug() << colors[i];
-    }
-
-    for(int i = 16; i < 260; i++){
-
-        if (i < 6*6*6+16) { /* same colors as xterm */
-            colors[i] = QColor(
-                sixd_to_16bit( ((i-16)/36)%6 ),
-                sixd_to_16bit( ((i-16)/6) %6 ),
-                sixd_to_16bit( ((i-16)/1) %6 ),
-                0xffff
-            );
-        } else { /* greyscale */
-            int red =  0x0808 + 0x0a0a * (i - (6*6*6+16));
-            colors[i] = QColor(red,red,red, 0xffff);
-        }
-        qDebug() << colors[i];
-
-    }
-    for(int i = 0; i < 4; i++){
-        colors[256 + i] = QColor(::customcolors[i]);
-        qDebug() << colors[i];
-    }
-
-}
-
 int QLightTerminal::sixd_to_16bit(int x)
 {
     return x == 0 ? 0 : 0x3737 + 0x2828 * x;
@@ -76,39 +42,59 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     QPainter painter(this);
 
     QString line;
+    uint32_t fgColor = 0;
+    uint32_t bgColor = 0;
+    int offset;
+    bool changed = false;
 
     int i = st->term.row;
     while(i > 0){
         i--;
 
-        if(!st->term.dirty[i]){
-            //return;
-        }
         st->term.dirty[i] = 0;
-
+        offset = 0;
         line = QString();
+        Glyph* tLine = st->term.line[i];
 
         for(int j = 0; j < st->term.col; j++){
-            if(st->term.line[i][j].u){
+            if(tLine[j].mode == ATTR_WDUMMY)
+                    continue;
 
-                if(st->term.line[i][j].mode == ATTR_WDUMMY)
-                        continue;
+            if(fgColor != tLine[j].fg){
+                fgColor = tLine[j].fg;
+                changed = true;
+            }
 
-                Glyph_ l =  st->term.line[i][j];
+            if(bgColor != tLine[j].bg){
+                bgColor = tLine[j].bg;
+                changed = true;
+            }
 
-                //qDebug() << l.bg << ' ' << l.fg << ' ' << l.mode << ' ' << QChar(l.u);
 
-                if (IS_TRUECOL(st->term.line[i][j].fg)) {
-                    painter.setPen(QColor(TRUERED(st->term.line[i][j].fg),TRUEGREEN(st->term.line[i][j].fg),TRUEBLUE(st->term.line[i][j].fg)));
+            // draw line till now and change color
+            if(changed){
+                painter.drawText(QPoint(offset, (i+1)*lineSpacing), line);
+                offset += QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
+
+                if (IS_TRUECOL(fgColor)) {
+                    painter.setPen(QColor(TRUERED(fgColor),TRUEGREEN(fgColor),TRUEBLUE(fgColor)));
                 } else {
-                   painter.setPen(colors[st->term.line[i][j].fg]);
+                   painter.setPen(colors[fgColor]);
                 }
 
-                line += QChar(st->term.line[i][j].u);
-            }
-        }
+                if (IS_TRUECOL(bgColor)) {
+                    painter.setBackground(QColor(TRUERED(bgColor),TRUEGREEN(bgColor),TRUEBLUE(bgColor)));
+                } else {
+                    painter.setBackground(QBrush(colors[bgColor]));
+                }
 
-        painter.drawText(QPoint(0,(i+1)*lineSpacing), line);
+                line = QString();
+                changed = false;
+            }
+
+            line += QChar(st->term.line[i][j].u);
+        }
+        painter.drawText(QPoint(offset,(i+1)*lineSpacing), line);
     }
 
 

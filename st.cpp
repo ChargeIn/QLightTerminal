@@ -1451,7 +1451,7 @@ void SimpleTerminal::tinsertblank(int n)
 void SimpleTerminal::tinsertblankline(int n)
 {
     if (BETWEEN(term.c.y, term.top, term.bot))
-        tscrolldown(term.c.y, n);    void tmoveato(int x, int y);
+        tscrolldown(term.c.y, n);
 }
 
 void SimpleTerminal::tscrolldown(int orig, int n)
@@ -2036,6 +2036,135 @@ int32_t SimpleTerminal::tdefcolor(const int *attr, int *npar, int l)
 }
 
 
+void SimpleTerminal::tsetmode(int priv, int set, const int *args, int narg)
+{
+
+    int alt; const int *lim;
+
+    for (lim = args + narg; args < lim; ++args) {
+        if (priv) {
+            switch (*args) {
+            case 1: /* DECCKM -- Cursor key */
+                xsetmode(set, MODE_APPCURSOR);
+                break;
+            case 5: /* DECSCNM -- Reverse video */
+                xsetmode(set, MODE_REVERSE);
+                break;
+            case 6: /* DECOM -- Origin */
+                MODBIT(term.c.state, set, CURSOR_ORIGIN);
+                tmoveato(0, 0);
+                break;
+            case 7: /* DECAWM -- Auto wrap */
+                MODBIT(term.mode, set, MODE_WRAP);
+                break;
+            case 0:  /* Error (IGNORED) */
+            case 2:  /* DECANM -- ANSI/VT52 (IGNORED) */
+            case 3:  /* DECCOLM -- Column  (IGNORED) */
+            case 4:  /* DECSCLM -- Scroll (IGNORED) */
+            case 8:  /* DECARM -- Auto repeat (IGNORED) */
+            case 18: /* DECPFF -- Printer feed (IGNORED) */
+            case 19: /* DECPEX -- Printer extent (IGNORED) */
+            case 42: /* DECNRCM -- National characters (IGNORED) */
+            case 12: /* att610 -- Start blinking cursor (IGNORED) */
+                break;
+            case 25: /* DECTCEM -- Text Cursor Enable Mode */
+                xsetmode(!set, MODE_HIDE);
+                break;
+            case 9:    /* X10 mouse compatibility mode */
+                //xsetpointermotion(0);
+                xsetmode(0, MODE_MOUSE);
+                xsetmode(set, MODE_MOUSEX10);
+                break;
+            case 1000: /* 1000: report button press */
+                //xsetpointermotion(0);
+                xsetmode(0, MODE_MOUSE);
+                xsetmode(set, MODE_MOUSEBTN);
+                break;
+            case 1002: /* 1002: report motion on button press */
+                //xsetpointermotion(0);
+                xsetmode(0, MODE_MOUSE);
+                xsetmode(set, MODE_MOUSEMOTION);
+                break;
+            case 1003: /* 1003: enable all mouse motions */
+                //xsetpointermotion(set);
+                xsetmode(0, MODE_MOUSE);
+                xsetmode(set, MODE_MOUSEMANY);
+                break;
+            case 1004: /* 1004: send focus events to tty */
+                xsetmode(set, MODE_FOCUS);
+                break;
+            case 1006: /* 1006: extended reporting mode */
+                xsetmode(set, MODE_MOUSESGR);
+                break;
+            case 1034:
+                xsetmode(set, MODE_8BIT);
+                break;
+            case 1049: /* swap screen & set/restore cursor as xterm */
+                tcursor((set) ? CURSOR_SAVE : CURSOR_LOAD);
+                /* FALLTHROUGH */
+            case 47: /* swap screen */
+            case 1047:
+                alt = IS_SET(term.mode, MODE_ALTSCREEN);
+                if (alt) {
+                    tclearregion(0, 0, term.col-1,
+                            term.row-1);
+                }
+                if (set ^ alt) /* set is always 1 or 0 */
+                    tswapscreen();
+                if (*args != 1049)
+                    break;
+                /* FALLTHROUGH */
+            case 1048:
+                tcursor((set) ? CURSOR_SAVE : CURSOR_LOAD);
+                break;
+            case 2004: /* 2004: bracketed paste mode */
+                xsetmode(set, MODE_BRCKTPASTE);
+                break;
+            /* Not implemented mouse modes. See comments there. */
+            case 1001: /* mouse highlight mode; can hang the
+                      terminal by design when implemented. */
+            case 1005: /* UTF-8 mouse mode; will confuse
+                      applications not supporting UTF-8
+                      and luit. */
+            case 1015: /* urxvt mangled mouse mode; incompatible
+                      and can be mistaken for other control
+                      codes. */
+                break;
+            default:
+                emit s_error("erresc: unknown private set/reset mode " + QString::number(*args));
+                break;
+            }
+        } else {
+            switch (*args) {
+            case 0:  /* Error (IGNORED) */
+                break;
+            case 2:
+                xsetmode(set, MODE_KBDLOCK);
+                break;
+            case 4:  /* IRM -- Insertion-replacement */
+                MODBIT(term.mode, set, MODE_INSERT);
+                break;
+            case 12: /* SRM -- Send/Receive */
+                MODBIT(term.mode, !set, MODE_ECHO);
+                break;
+            case 20: /* LNM -- Linefeed/new line */
+                MODBIT(term.mode, set, MODE_CRLF);
+                break;
+            default:
+                emit s_error("erresc: unknown set/reset mode " + QString::number(*args));
+                break;
+            }
+        }
+    }
+}
+
+void SimpleTerminal::xsetmode(int set, unsigned int flags)
+{
+    int mode = win.mode;
+    MODBIT(win.mode, set, flags);
+    if ((win.mode & MODE_REVERSE) != (mode & MODE_REVERSE))
+        redraw();
+}
 
 // ------------------------------ TODO ------------------------
 void SimpleTerminal::xsetsel(char *strvtiden)
@@ -2095,26 +2224,11 @@ void SimpleTerminal::resettitle(void)
     qDebug() << "resettitle";
 }
 
-void SimpleTerminal::xsetmode(int set, unsigned int flags)
-{
-    // TODO
-    qDebug() << "xsetmode";
-}
-
-
 int SimpleTerminal::xsetcursor(int cursor)
 {
     // TODO
     qDebug() << "xsetcursor";
 }
-
-void SimpleTerminal::tsetmode(int priv, int set, const int *args, int narg)
-{
-    // TODO
-    // add mode support
-    qDebug() << "tsetmode";
-}
-
 
 void SimpleTerminal::tprinter(char*s, size_t len){
     // TODO

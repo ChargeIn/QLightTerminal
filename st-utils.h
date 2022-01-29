@@ -207,4 +207,37 @@ static const char base64_digits[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
+enum win_mode {
+    MODE_VISIBLE     = 1 << 0,
+    MODE_FOCUSED     = 1 << 1,
+    MODE_APPKEYPAD   = 1 << 2,
+    MODE_MOUSEBTN    = 1 << 3,
+    MODE_MOUSEMOTION = 1 << 4,
+    MODE_REVERSE     = 1 << 5,
+    MODE_KBDLOCK     = 1 << 6,
+    MODE_HIDE        = 1 << 7,
+    MODE_APPCURSOR   = 1 << 8,
+    MODE_MOUSESGR    = 1 << 9,
+    MODE_8BIT        = 1 << 10,
+    MODE_BLINK       = 1 << 11,
+    MODE_FBLINK      = 1 << 12,
+    MODE_FOCUS       = 1 << 13,
+    MODE_MOUSEX10    = 1 << 14,
+    MODE_MOUSEMANY   = 1 << 15,
+    MODE_BRCKTPASTE  = 1 << 16,
+    MODE_NUMLOCK     = 1 << 17,
+    MODE_MOUSE       = MODE_MOUSEBTN|MODE_MOUSEMOTION|MODE_MOUSEX10\
+                      |MODE_MOUSEMANY,
+};
+
+/* Purely graphic info */
+typedef struct {
+    int tw, th; /* tty width and height */
+    int w, h; /* window width and height */
+    int ch; /* char height */
+    int cw; /* char width  */
+    int mode; /* window state/mode flags */
+    int cursor; /* cursor style */
+} TermWindow;
+
 #endif // STUTILS_H
