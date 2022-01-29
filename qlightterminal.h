@@ -22,7 +22,7 @@ private:
     SimpleTerminal * st;
     QString altView = QString();
     double lineheight = 14;
-    int vPadding = 4;
+    int vPadding = 2;
     int hPadding = 8;
 
     void paintEvent(QPaintEvent *event) override;

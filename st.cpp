@@ -10,6 +10,7 @@
 #include <stdlib.h>
 
 #include <QString>
+#include <QApplication>
 
 #if   defined(__linux)
  #include <pty.h>
@@ -34,7 +35,7 @@ SimpleTerminal::SimpleTerminal(): QObject()
 
 void SimpleTerminal::tnew(int col, int row)
 {
-    term = (Term){ .c = { .attr = { .fg = defaultfg, .bg = defaultbg } } };
+    term = (Term){ .c = { .attr = { .u = defaultCursor, .fg = defaultfg, .bg = defaultbg, } } };
     tresize(col, row);
     treset();
 }
@@ -49,6 +50,8 @@ void SimpleTerminal::closePty(){
         ::close(master);
         master = -1;
     }
+
+    emit s_closed();
 }
 
 void SimpleTerminal::ttynew()
@@ -916,19 +919,10 @@ void SimpleTerminal::strhandle(void)
     switch (strescseq.type) {
     case ']': /* OSC -- Operating System Command */
         switch (par) {
+        // Florian Plesker: removed set title since it is a widget
         case 0:
-            if (narg > 1) {
-                xsettitle(strescseq.args[1]);
-                xseticontitle(strescseq.args[1]);
-            }
-            return;
         case 1:
-            if (narg > 1)
-                xseticontitle(strescseq.args[1]);
-            return;
         case 2:
-            if (narg > 1)
-                xsettitle(strescseq.args[1]);
             return;
         case 52:
             if (narg > 2 && allowwindowops) {
@@ -1006,7 +1000,6 @@ void SimpleTerminal::strhandle(void)
         }
         break;
     case 'k': /* old title set compatibility */
-        xsettitle(strescseq.args[0]);
         return;
     case 'P': /* DCS -- Device Control String */
     case '_': /* APC -- Application Program Command */
@@ -1593,7 +1586,6 @@ int SimpleTerminal::eschandle(uchar ascii)
         break;
     case 'c': /* RIS -- Reset to initial state */
         treset();
-        resettitle();
         xloadcols();
         break;
     case '=': /* DECPAM -- Application keypad */
@@ -1625,6 +1617,7 @@ void SimpleTerminal::treset(void)
     uint i;
 
     term.c = (TCursor){{
+        .u = defaultCursor,
         .mode = ATTR_NULL,
         .fg = defaultfg, // see define default fg
         .bg = defaultbg // see define default bg
@@ -2166,6 +2159,11 @@ void SimpleTerminal::xsetmode(int set, unsigned int flags)
         redraw();
 }
 
+void SimpleTerminal::bell(){
+    QApplication::beep();
+}
+
+
 // ------------------------------ TODO ------------------------
 void SimpleTerminal::xsetsel(char *strvtiden)
 {
@@ -2177,12 +2175,6 @@ void SimpleTerminal::xclipcopy(void)
 {
     // TODO
     qDebug() << "xclipcopy";
-}
-
-void SimpleTerminal::xseticontitle(char *p)
-{
-    // TODO
-    qDebug() << "xseticontitle: " << p;
 }
 
 void SimpleTerminal::draw(void)
@@ -2206,22 +2198,10 @@ int SimpleTerminal::xgetcolor(int x, unsigned char *r, unsigned char *g, unsigne
     return 0;
 }
 
-
 void SimpleTerminal::xloadcols()
 {
     // TODO
     qDebug() << "xloadcols";
-}
-
-void SimpleTerminal::xsettitle(char *p){
-    // TODO
-    qDebug() << "xsettitle:"  << p ;
-}
-
-void SimpleTerminal::resettitle(void)
-{
-    // TODO
-    qDebug() << "resettitle";
 }
 
 int SimpleTerminal::xsetcursor(int cursor)
@@ -2233,9 +2213,4 @@ int SimpleTerminal::xsetcursor(int cursor)
 void SimpleTerminal::tprinter(char*s, size_t len){
     // TODO
     qDebug() << "tprinter";
-}
-
-void SimpleTerminal::bell(){
-    // TODO
-    qDebug() << "bell";
 }

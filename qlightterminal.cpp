@@ -38,8 +38,6 @@ int QLightTerminal::sixd_to_16bit(int x)
 
 void QLightTerminal::paintEvent(QPaintEvent *event){
 
-    int lineSpacing = fontMetrics().lineSpacing();
-
     QPainter painter(this);
     painter.setBackgroundMode(Qt::BGMode::OpaqueMode);
 
@@ -49,6 +47,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     int offset;
     bool changed = false;
 
+    // draw the terminal text
     int i = st->term.row;
     while(i > 0){
         i--;
@@ -99,6 +98,17 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
         painter.drawText(QPoint(offset,(i+1)*lineheight + vPadding), line);
     }
 
+
+    // draw cursor
+    line = QString();
+
+    for(int i = 0; i < st->term.c.x; i++) {
+        line += QChar(st->term.line[st->term.c.y][i].u);
+    }
+    int cursorOffset = QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
+
+    painter.setPen(colors[st->term.c.attr.fg]);
+    painter.drawText(QPoint(cursorOffset + hPadding,(st->term.c.y+1)*lineheight + vPadding), QChar(st->term.c.attr.u));
 
    /**
     *  TODO Add later

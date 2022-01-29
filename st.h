@@ -37,6 +37,8 @@ public slots:
 signals:
     void s_error(QString);
 
+    void s_closed();
+
     void updateView(Term* state);
 
 private:
@@ -62,6 +64,7 @@ private:
     unsigned int defaultrcs = 257;
     unsigned int defaultfg = 258;
     unsigned int defaultbg = 259;
+    unsigned int defaultCursor = 95;
 
     const int tabspaces = 8;
 
@@ -69,7 +72,7 @@ private:
        setting the clipboard text */
     int allowwindowops = 0;
 
-    char* vtiden = "\033[?6c";
+    const char* vtiden = "\033[?6c";
 
     const uchar utfbyte[UTF_SIZ + 1] = {0x80,    0, 0xC0, 0xE0, 0xF0};
     const uchar utfmask[UTF_SIZ + 1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
@@ -132,22 +135,19 @@ private:
     void tsetattr(const int *attr, int l);
     int32_t tdefcolor(const int *attr, int *npar, int l);
     void xsetmode(int set, unsigned int flags);
+    void tsetmode(int priv, int set, const int *args, int narg);
     void tswapscreen(void);
+    void bell(void);
 
     // TODO
     void xsetsel(char *str);
     void xclipcopy(void);
-    void xseticontitle(char *p);
     int xsetcolorname(int x, const char *name);
     int xgetcolor(int x, unsigned char *r, unsigned char *g, unsigned char *b);
-    void xsettitle(char *p);
     void xloadcols(void);
-    void resettitle(void);
     int xsetcursor(int cursor);
 
-    void bell(void); // TODO
     void tprinter(char*s, size_t len); // TODO
-    void tsetmode(int priv, int set, const int *args, int narg); // TODO
 };
 
 #endif // ST_H
