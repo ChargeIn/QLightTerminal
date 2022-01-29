@@ -31,8 +31,10 @@ private:
 
 protected:
     virtual void keyPressEvent(QKeyEvent *event) override;
+
     void  mousePressEvent ( QMouseEvent * event ) override;
 
+    virtual void resizeEvent(QResizeEvent *event) override;
 
 private:
     /*

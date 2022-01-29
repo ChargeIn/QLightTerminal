@@ -181,8 +181,7 @@ void SimpleTerminal::tresize(int col, int row)
     TCursor c;
 
     if (col < 1 || row < 1) {
-        fprintf(stderr,
-                "tresize: error resizing to %dx%d\n", col, row);
+        emit s_error("tresize: error resizing to x: " + QString::number(col) + ", y: " + QString::number(row));
         return;
     }
 
@@ -2161,6 +2160,21 @@ void SimpleTerminal::xsetmode(int set, unsigned int flags)
 
 void SimpleTerminal::bell(){
     QApplication::beep();
+}
+
+void SimpleTerminal::ttyresize(int tw, int th)
+{
+    win.tw = tw;
+    win.th = th;
+
+    wsize.ws_row = term.row;
+    wsize.ws_col = term.col;
+    wsize.ws_xpixel = tw;
+    wsize.ws_ypixel = th;
+
+    if (ioctl(master, TIOCSWINSZ, &wsize) < 0) {
+        emit s_error("Couldn't set window size: " + QString(strerror(errno)));
+    }
 }
 
 

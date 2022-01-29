@@ -153,3 +153,20 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
 void QLightTerminal::mousePressEvent(QMouseEvent *event){
     setFocus();
 }
+
+void QLightTerminal::resizeEvent(QResizeEvent *event)
+{
+    int col, row;
+    // TODO: figure out why fontMetrics().maxWidth() is returning wrong size;
+    // for now replaced with 8.5
+
+    col = (event->size().width() - 2 * hPadding) / 8.5;
+    row = (event->size().height() - 2 * vPadding) / lineheight;
+    col = MAX(1, col);
+    row = MAX(1, row);
+
+    st->tresize(col, row);
+    st->ttyresize(col*8.5, row*lineheight);
+
+    update();
+}

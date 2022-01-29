@@ -5,6 +5,8 @@
 #include <QString>
 #include <QSocketNotifier>
 
+#include <sys/ioctl.h>
+
 #include "st-utils.h"
 
 class SimpleTerminal: public QObject
@@ -25,6 +27,8 @@ public:
 
     void tresize(int col, int row);
 
+    void ttyresize(int tw, int th);
+
     int twrite(const char* buf, int size, int show_ctrl);
 
     void ttywrite(const char *s, size_t n, int may_echo);
@@ -43,6 +47,7 @@ signals:
 
 private:
     TermWindow win;
+    winsize wsize;
 
     int master, slave;
     pid_t processId;
