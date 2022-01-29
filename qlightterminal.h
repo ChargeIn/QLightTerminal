@@ -21,6 +21,9 @@ public slots:
 private:
     SimpleTerminal * st;
     QString altView = QString();
+    double lineheight = 14;
+    int vPadding = 4;
+    int hPadding = 8;
 
     void paintEvent(QPaintEvent *event) override;
 
@@ -39,7 +42,7 @@ private:
         // 8 normal Colors
         QColor(0,0,0),          // Black
         QColor(240,82,79),      // Red
-        QColor(92,150,44),      // Green
+        QColor(98,177,32),      // Green
         QColor(166,138,13),     // Yellow
         QColor(57,147,212),     // Blue
         QColor(167,113,191),    // Magenta
@@ -298,7 +301,7 @@ private:
         QColor(204,204,204),
         QColor(85,85,85),
         QColor(187,187,187),        // Default font color
-        QColor(28,32,34)            // Default background color
+        QColor(22,22,22)            // Default background color
     };
 };
 

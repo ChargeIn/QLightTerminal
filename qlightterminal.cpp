@@ -19,8 +19,9 @@ QLightTerminal::QLightTerminal(): QWidget()
     st = new SimpleTerminal();
 
     // setup default style
-    setStyleSheet("background: #1c2022; font-size: 14px; font-weight: 500;");
+    setStyleSheet("background: #161616; font-size: 14px; font-weight: 500;");
     setFont(QFont("mono"));
+    lineheight = fontMetrics().lineSpacing()*1.25;
 
     connect(st, &SimpleTerminal::s_error, this, [](QString error){ qDebug() << "Error from st: " << error;});
     connect(st, &SimpleTerminal::updateView, this, &QLightTerminal::updateTerminal);
@@ -37,9 +38,10 @@ int QLightTerminal::sixd_to_16bit(int x)
 
 void QLightTerminal::paintEvent(QPaintEvent *event){
 
-    int lineSpacing = this->fontMetrics().lineSpacing();
+    int lineSpacing = fontMetrics().lineSpacing();
 
     QPainter painter(this);
+    painter.setBackgroundMode(Qt::BGMode::OpaqueMode);
 
     QString line;
     uint32_t fgColor = 0;
@@ -52,7 +54,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
         i--;
 
         st->term.dirty[i] = 0;
-        offset = 0;
+        offset = hPadding;
         line = QString();
         Glyph* tLine = st->term.line[i];
 
@@ -73,7 +75,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
             // draw line till now and change color
             if(changed){
-                painter.drawText(QPoint(offset, (i+1)*lineSpacing), line);
+                painter.drawText(QPoint(offset, (i+1)*lineheight + vPadding), line);
                 offset += QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
 
                 if (IS_TRUECOL(fgColor)) {
@@ -94,7 +96,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
             line += QChar(st->term.line[i][j].u);
         }
-        painter.drawText(QPoint(offset,(i+1)*lineSpacing), line);
+        painter.drawText(QPoint(offset,(i+1)*lineheight + vPadding), line);
     }
 
 
