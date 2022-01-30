@@ -9,19 +9,38 @@
 #include <QPainter>
 #include <QKeyEvent>
 #include <QPoint>
+#include <QLayout>
+#include <QGraphicsAnchorLayout>
+#include <QPoint>
 
 #if DEBUGGING
     #include <QDebug>
 #endif
 
-QLightTerminal::QLightTerminal(): QWidget()
+QLightTerminal::QLightTerminal(int maxLines): QWidget(), scrollbar(Qt::Orientation::Vertical), boxLayout(this)
 {
-    st = new SimpleTerminal();
+    maxLineCount = maxLines;
 
     // setup default style
     setStyleSheet("background: #161616; font-size: 14px; font-weight: 500;");
     setFont(QFont("mono"));
     lineheight = fontMetrics().lineSpacing()*1.25;
+
+    // set up scrollbar
+    boxLayout.setSpacing(0);
+    boxLayout.setContentsMargins(0,0,0,0);
+    boxLayout.addWidget(&scrollbar);
+    boxLayout.setAlignment(&scrollbar, Qt::AlignRight);
+
+    connect(&scrollbar, &QScrollBar::valueChanged, this, &QLightTerminal::scrollX);
+
+    viewPortHeight = height/lineheight;
+    double scrollHeight = (maxLines-viewPortHeight)*scrollMultiplier;
+    scrollbar.setMaximum(scrollHeight);
+    scrollbar.setValue(scrollHeight);
+
+    // set up terminal
+    st = new SimpleTerminal(maxLines);
 
     connect(st, &SimpleTerminal::s_error, this, [](QString error){ qDebug() << "Error from st: " << error;});
     connect(st, &SimpleTerminal::updateView, this, &QLightTerminal::updateTerminal);
@@ -31,9 +50,10 @@ void QLightTerminal::updateTerminal(Term* term){
     update();
 }
 
-int QLightTerminal::sixd_to_16bit(int x)
+void QLightTerminal::scrollX(int x)
 {
-    return x == 0 ? 0 : 0x3737 + 0x2828 * x;
+    viewPortScrollX = maxLineCount - x/scrollMultiplier;
+    update();
 }
 
 void QLightTerminal::paintEvent(QPaintEvent *event){
@@ -47,9 +67,17 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     int offset;
     bool changed = false;
 
+    // apply a padding of two 2 lines
+    qDebug() << viewPortHeight << "Cursor " << st->term.c.y;
+
+    double start = MAX(MIN(st->term.c.y-viewPortScrollX, maxLineCount), viewPortHeight);
+    double end = MAX(0, start-viewPortHeight - 2);
+    double yPos = viewPortHeight*lineheight + vPadding + ((int) start - start)*lineheight;
+;
+
     // draw the terminal text
-    int i = st->term.row;
-    while(i > 0){
+    int i = start;
+    while(i > end){
         i--;
 
         st->term.dirty[i] = 0;
@@ -74,7 +102,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
             // draw line till now and change color
             if(changed){
-                painter.drawText(QPoint(offset, (i+1)*lineheight + vPadding), line);
+                painter.drawText(QPoint(offset, yPos), line);
                 offset += QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
 
                 if (IS_TRUECOL(fgColor)) {
@@ -95,7 +123,8 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
             line += QChar(st->term.line[i][j].u);
         }
-        painter.drawText(QPoint(offset,(i+1)*lineheight + vPadding), line);
+        painter.drawText(QPoint(offset,yPos), line);
+        yPos -= lineheight;
     }
 
 
@@ -108,7 +137,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     int cursorOffset = QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
 
     painter.setPen(colors[st->term.c.attr.fg]);
-    painter.drawText(QPoint(cursorOffset + hPadding,(st->term.c.y+1)*lineheight + vPadding), QChar(st->term.c.attr.u));
+    painter.drawText(QPoint(cursorOffset + hPadding,(st->term.c.y+1)*lineheight), QChar(st->term.c.attr.u));
 
    /**
     *  TODO Add later
@@ -156,17 +185,44 @@ void QLightTerminal::mousePressEvent(QMouseEvent *event){
 
 void QLightTerminal::resizeEvent(QResizeEvent *event)
 {
-    int col, row;
+    height = event->size().height();
+    viewPortHeight = height/lineheight;
+
+    // multiply by 100 to allow for smoother scrolling
+    scrollbar.setMaximum((maxLineCount-viewPortHeight)*scrollMultiplier);
+
+    int col;
     // TODO: figure out why fontMetrics().maxWidth() is returning wrong size;
     // for now replaced with 8.5
 
     col = (event->size().width() - 2 * hPadding) / 8.5;
-    row = (event->size().height() - 2 * vPadding) / lineheight;
     col = MAX(1, col);
-    row = MAX(1, row);
 
-    st->tresize(col, row);
-    st->ttyresize(col*8.5, row*lineheight);
+    st->tresize(col, maxLineCount);
+    st->ttyresize(col*8.5, maxLineCount*lineheight);
 
     update();
+
+    event->accept();
+}
+
+void QLightTerminal::wheelEvent(QWheelEvent *event)
+{
+    QPoint numPixels = event->pixelDelta();
+    event->accept();
+
+    if (!numPixels.isNull()) {
+        // TODO: test if this works << needs mouse with finer resolution
+        scrollbar.setValue(scrollbar.value() + numPixels.y()*15);
+        scrollX(scrollbar.value());
+        return;
+    }
+
+    QPoint numDegrees = event->angleDelta();
+
+    if (!numDegrees.isNull()) {
+        scrollbar.setValue(scrollbar.value() - numDegrees.y()*1.5);
+        scrollX(scrollbar.value());
+        return;
+    }
 }

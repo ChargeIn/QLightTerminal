@@ -20,11 +20,11 @@
  #include <libutil.h>
 #endif
 
-SimpleTerminal::SimpleTerminal(): QObject()
+SimpleTerminal::SimpleTerminal(int col): QObject()
 {
     readBufSize = sizeof(readBuf)/sizeof(readBuf[0]);
 
-    tnew(80, 24);
+    tnew(80, col);
     ttynew();
 
     readNotifier = new QSocketNotifier(master, QSocketNotifier::Read);

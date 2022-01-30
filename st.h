@@ -15,7 +15,7 @@ class SimpleTerminal: public QObject
 public:
     Term term;
 
-    SimpleTerminal();
+    SimpleTerminal(int numOfLines);
 
     void tnew(int col, int row);
 

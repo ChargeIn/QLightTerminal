@@ -7,34 +7,48 @@
 
 #include <QWidget>
 #include <QStringList>
+#include <QScrollBar>
+#include <QHBoxLayout>
 
 #include "st.h"
 
 class QLightTerminal : public QWidget
 {
 public:
-    QLightTerminal();
+    QLightTerminal(int maxLines = 200);
 
 public slots:
     void updateTerminal(Term* term);
 
+    /*
+     * Scrolls the terminal vertically to the given offset
+     * Max scroll height is 10x max line count
+     */
+    void scrollX(int x);
+
 private:
-    SimpleTerminal * st;
-    QString altView = QString();
+    SimpleTerminal *st;
+    QScrollBar scrollbar;
+    QHBoxLayout boxLayout;
     double lineheight = 14;
+    double maxLineCount;
+    int height = 200;
+    double viewPortHeight = 0; // number of lines visible
+    double viewPortScrollX = 0; // number of lines scrolled up fromm the cursor
+    double scrollMultiplier = 100.0; // allows for smooth scrolling
     int vPadding = 2;
     int hPadding = 8;
 
     void paintEvent(QPaintEvent *event) override;
 
-    int sixd_to_16bit(int x);
-
 protected:
-    virtual void keyPressEvent(QKeyEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
 
-    void  mousePressEvent ( QMouseEvent * event ) override;
+    void mousePressEvent ( QMouseEvent * event ) override;
 
-    virtual void resizeEvent(QResizeEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
+
+    void wheelEvent(QWheelEvent *event);
 
 private:
     /*
