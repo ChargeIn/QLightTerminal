@@ -52,7 +52,7 @@ void QLightTerminal::updateTerminal(Term* term){
 
 void QLightTerminal::scrollX(int x)
 {
-    viewPortScrollX = maxLineCount - x/scrollMultiplier;
+    viewPortScrollX = maxLineCount - viewPortHeight - x/scrollMultiplier;
     update();
 }
 
@@ -68,12 +68,9 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     bool changed = false;
 
     // apply a padding of two 2 lines
-    qDebug() << viewPortHeight << "Cursor " << st->term.c.y;
-
-    double start = MAX(MIN(st->term.c.y-viewPortScrollX, maxLineCount), viewPortHeight);
+    double start = MAX(MIN(st->term.c.y-viewPortScrollX+2, maxLineCount), viewPortHeight);
     double end = MAX(0, start-viewPortHeight - 2);
-    double yPos = viewPortHeight*lineheight + vPadding + ((int) start - start)*lineheight;
-;
+    double yPos = viewPortHeight*lineheight + ((int) start - start)*lineheight;
 
     // draw the terminal text
     int i = start;
@@ -100,7 +97,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
             }
 
 
-            // draw line till now and change color
+            // draw line state now and change color
             if(changed){
                 painter.drawText(QPoint(offset, yPos), line);
                 offset += QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
