@@ -48,7 +48,7 @@ protected:
 
     void resizeEvent(QResizeEvent *event) override;
 
-    void wheelEvent(QWheelEvent *event);
+    void wheelEvent(QWheelEvent *event) override;
 
 private:
     /*

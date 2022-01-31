@@ -181,6 +181,8 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
         // special keys
         // TODO: Add more short cuts
         // TODO: Refactor the if statements to dynamically add the escape sequence and modifier
+        Qt::KeyboardModifiers mods = e->modifiers();
+
         switch(e->key()){
         case Qt::Key_Up:
             if(mods == Qt::NoModifier){
