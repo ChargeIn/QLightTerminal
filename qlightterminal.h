@@ -9,8 +9,17 @@
 #include <QStringList>
 #include <QScrollBar>
 #include <QHBoxLayout>
+#include <QKeyCombination>
 
 #include "st.h"
+
+typedef struct {
+    Qt::Key key;
+    Qt::KeyboardModifier mods;
+    char cmd[7];
+    size_t cmd_size;
+    int nextKey;
+} SpecialKey;
 
 class QLightTerminal : public QWidget
 {
@@ -51,6 +60,37 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
 
 private:
+    /*
+     * Special Keyboard Character
+     */
+    constexpr static const SpecialKey keys[25] = {
+        { Qt::Key_Left, Qt::NoModifier, "\033[D", 3, 4},
+        { Qt::Key_Left, Qt::ShiftModifier, "\033[1;2D", 7, 3},
+        { Qt::Key_Left, Qt::AltModifier, "\033[1;3D", 7, 2},
+        { Qt::Key_Left, Qt::ControlModifier, "\033[1;5D", 7, 1},
+        { Qt::Key_Up, Qt::NoModifier, "\033[A", 3, 4},
+        { Qt::Key_Up, Qt::ShiftModifier, "\033[1;2A", 7, 3},
+        { Qt::Key_Up, Qt::AltModifier, "\033[1;3A", 7, 2},
+        { Qt::Key_Up, Qt::ControlModifier, "\033[1;5A", 7, 1},
+        { Qt::Key_Right, Qt::NoModifier, "\033[C", 3, 4},
+        { Qt::Key_Right, Qt::ShiftModifier, "\033[1;2C", 7, 3},
+        { Qt::Key_Right, Qt::AltModifier, "\033[1;3C", 7, 2},
+        { Qt::Key_Right, Qt::ControlModifier, "\033[1;5C", 7, 1},
+        { Qt::Key_Down, Qt::NoModifier, "\033[B", 3, 4},
+        { Qt::Key_Down, Qt::ShiftModifier, "\033[1;2B", 7,3},
+        { Qt::Key_Down, Qt::AltModifier, "\033[1;3B", 7, 2},
+        { Qt::Key_Down, Qt::ControlModifier, "\033[1;5B", 7, 1},
+        { Qt::Key_F1, Qt::NoModifier, "\033OP", 3, 1},
+        { Qt::Key_F2, Qt::NoModifier, "\033OQ", 3, 1},
+        { Qt::Key_F3, Qt::NoModifier, "\033OR", 3, 1},
+        { Qt::Key_F4, Qt::NoModifier, "\033OS", 3, 1},
+        { Qt::Key_F5, Qt::NoModifier, "\033[15~", 6, 1},
+        { Qt::Key_F6, Qt::NoModifier, "\033[17~", 6, 1},
+        { Qt::Key_F7, Qt::NoModifier, "\033[18~", 6, 1},
+        { Qt::Key_F8, Qt::NoModifier, "\033[19~", 6, 1},
+        { Qt::Key_F9, Qt::NoModifier, "\033[20~", 6, 1},
+    };
+
     /*
      * Terminal colors (same as xterm)
      */

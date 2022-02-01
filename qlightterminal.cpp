@@ -12,7 +12,6 @@
 #include <QLayout>
 #include <QGraphicsAnchorLayout>
 #include <QPoint>
-#include <QKeyCombination>
 
 #if DEBUGGING
     #include <QDebug>
@@ -180,110 +179,25 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
     } else {
         // special keys
         // TODO: Add more short cuts
-        // TODO: Refactor the if statements to dynamically add the escape sequence and modifier
         Qt::KeyboardModifiers mods = e->modifiers();
+        int key = e->key();
+        int end = 24;
 
-        switch(e->key()){
-        case Qt::Key_Up:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033[A", 3,1);
-            } else if(mods == Qt::ShiftModifier){
-                st->ttywrite("\033[1;2A",5,1);
-            } else if(mods == Qt::AltModifier){
-                st->ttywrite("\033[1;3A",5,1);
-            } else if(mods == Qt::ControlModifier){
-                st->ttywrite("\033[1;5A",5,1);
-            } else {
-                st->ttywrite("\033[A", 3,1);
+        if(key > keys[end].key || key < keys[0].key){
+            return;
+        }
+
+        for(int i = 0; i < end;){
+            int nextKey = keys[i].nextKey;
+            if(key == keys[i].key){
+                for(int j = i; j < i + nextKey; j++){
+                    if(mods == keys[j].mods){
+                        st->ttywrite(keys[j].cmd, keys[j].cmd_size,1);
+                        return;
+                    }
+                }
             }
-            break;
-        case Qt::Key_Down:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033[B", 3,1);
-            } else if(mods == Qt::ShiftModifier){
-                st->ttywrite("\033[1;2B",5,1);
-            } else if(mods == Qt::AltModifier){
-                st->ttywrite("\033[1;3B",5,1);
-            } else if(mods == Qt::ControlModifier){
-                st->ttywrite("\033[1;5B",5,1);
-            } else {
-                st->ttywrite("\033[B", 3,1);
-            }
-            break;
-        case Qt::Key_Left:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033[D", 3,1);
-            } else if(mods == Qt::ShiftModifier){
-                st->ttywrite("\033[1;2D",5,1);
-            } else if(mods == Qt::AltModifier){
-                st->ttywrite("\033[1;3D",5,1);
-            } else if(mods == Qt::ControlModifier){
-                st->ttywrite("\033[1;5D",5,1);
-            } else {
-                st->ttywrite("\033[D", 3,1);
-            }
-            break;
-        case Qt::Key_Right:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033[C", 3,1);
-            } else if(mods == Qt::ShiftModifier){
-                st->ttywrite("\033[1;2C",5,1);
-            } else if(mods == Qt::AltModifier){
-                st->ttywrite("\033[1;3C",5,1);
-            } else if(mods == Qt::ControlModifier){
-                st->ttywrite("\033[1;5C",5,1);
-            } else {
-                st->ttywrite("\033[C", 3,1);
-            }
-            break;
-        case Qt::Key_F1:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033OP",3,1);
-            }
-            break;
-        case Qt::Key_F2:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033OQ",3,1);
-            }
-            break;
-        case Qt::Key_F3:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033OR",3,1);
-            }
-            break;
-        case Qt::Key_F4:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033OS",3,1);
-            }
-            break;
-        case Qt::Key_F5:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033[15~",6,1);
-            }
-            break;
-        case Qt::Key_F6:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033[17~",6,1);
-            }
-            break;
-        case Qt::Key_F7:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033[18~",6,1);
-            }
-            break;
-        case Qt::Key_F8:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033[19~",6,1);
-            }
-            break;
-        case Qt::Key_F9:
-            if(mods == Qt::NoModifier){
-                st->ttywrite("\033[20~",6,1);
-            }
-            break;
-        default:
-            // do nothing;
-            break;
+            i += nextKey;
         }
     }
 }
