@@ -48,6 +48,8 @@ private:
     int vPadding = 2;
     int hPadding = 8;
 
+    void setupScrollbar(int maxLines);
+
     void paintEvent(QPaintEvent *event) override;
 
 protected:

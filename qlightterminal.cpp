@@ -35,9 +35,7 @@ QLightTerminal::QLightTerminal(int maxLines): QWidget(), scrollbar(Qt::Orientati
     connect(&scrollbar, &QScrollBar::valueChanged, this, &QLightTerminal::scrollX);
 
     viewPortHeight = height/lineheight;
-    double scrollHeight = (maxLines-viewPortHeight)*scrollMultiplier;
-    scrollbar.setMaximum(scrollHeight);
-    scrollbar.setValue(scrollHeight);
+    setupScrollbar(maxLines);
 
     // set up terminal
     st = new SimpleTerminal(maxLines);
@@ -248,4 +246,20 @@ void QLightTerminal::wheelEvent(QWheelEvent *event)
         scrollX(scrollbar.value());
         return;
     }
+}
+
+void QLightTerminal::setupScrollbar(int maxLines){
+    double scrollHeight = (maxLines-viewPortHeight)*scrollMultiplier;
+    scrollbar.setMaximum(scrollHeight);
+    scrollbar.setValue(scrollHeight);
+    scrollbar.setPageStep(scrollHeight/10);
+    scrollbar.setStyleSheet(R"(
+                        QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
+                            height: 0;
+                        }
+
+                        QScrollBar::vertical  {
+                            margin: 0;
+                        }
+    )");
 }
