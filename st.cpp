@@ -20,7 +20,7 @@
  #include <libutil.h>
 #endif
 
-SimpleTerminal::SimpleTerminal(int col): QObject()
+SimpleTerminal::SimpleTerminal(int col, QObject *parent): QObject(parent)
 {
     readBufSize = sizeof(readBuf)/sizeof(readBuf[0]);
 
@@ -31,6 +31,25 @@ SimpleTerminal::SimpleTerminal(int col): QObject()
     readNotifier->setEnabled(true);
 
     connect(readNotifier,&QSocketNotifier::activated, this, &SimpleTerminal::ttyread);
+
+    // Fix for Zorin OS (error: invalid old space)
+    // Needed since we only call realloc later
+    strescseq.buf = (char*) malloc(STR_BUF_SIZ);
+}
+
+SimpleTerminal::~SimpleTerminal(){
+    disconnect(readNotifier);
+
+    for (int i = 0; i <= term.row; i++) {
+        free(term.line[i]);
+        free(term.alt[i]);
+    }
+
+    free(term.dirty);
+    free(term.tabs);
+    free(strescseq.buf);
+
+    delete readNotifier;
 }
 
 void SimpleTerminal::tnew(int col, int row)

@@ -24,7 +24,7 @@ typedef struct {
 class QLightTerminal : public QWidget
 {
 public:
-    QLightTerminal(int maxLines = 200);
+    QLightTerminal(int maxLines = 200, QWidget *parent = nullptr);
 
 public slots:
     void updateTerminal(Term* term);

@@ -17,7 +17,7 @@
     #include <QDebug>
 #endif
 
-QLightTerminal::QLightTerminal(int maxLines): QWidget(), scrollbar(Qt::Orientation::Vertical), boxLayout(this)
+QLightTerminal::QLightTerminal(int maxLines, QWidget *parent): QWidget(parent), scrollbar(Qt::Orientation::Vertical), boxLayout(this)
 {
     maxLineCount = maxLines;
 
