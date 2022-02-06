@@ -10,6 +10,8 @@
 #include <QScrollBar>
 #include <QHBoxLayout>
 #include <QKeyCombination>
+#include <QTimer>
+#include <QPoint>
 
 #include "st.h"
 
@@ -20,6 +22,20 @@ typedef struct {
     size_t cmd_size;
     int nextKey;
 } SpecialKey;
+
+typedef struct {
+   int width;
+   int height;
+   double viewPortHeight; // number of lines visible
+   double viewPortScrollY; // number of lines scrolled down
+   double viewPortMaxScrollY; // maximum scrollable lines
+   double scrollMultiplier; // allows for smooth scrolling
+   double lineheight;
+   double maxLineCount;
+   int vPadding;
+   int hPadding;
+   QPoint cursorPos;
+} Window;
 
 class QLightTerminal : public QWidget
 {
@@ -39,14 +55,10 @@ private:
     SimpleTerminal *st;
     QScrollBar scrollbar;
     QHBoxLayout boxLayout;
-    double lineheight = 14;
-    double maxLineCount;
-    int height = 200;
-    double viewPortHeight = 0; // number of lines visible
-    double viewPortScrollX = 0; // number of lines scrolled up fromm the cursor
-    double scrollMultiplier = 100.0; // allows for smooth scrolling
-    int vPadding = 2;
-    int hPadding = 8;
+    QTimer cursorTimer;
+    Window win;
+
+    double cursorVisible = true;
 
     void setupScrollbar(int maxLines);
 
@@ -356,10 +368,10 @@ private:
         QColor(228,228,228),
         QColor(238,238,238),
         // Default colors
-        QColor(204,204,204),
+        QColor(255,255,255),
         QColor(85,85,85),
         QColor(187,187,187),        // Default font color
-        QColor(22,22,22)            // Default background color
+        QColor(24,24,24)            // Default background color
     };
 };
 

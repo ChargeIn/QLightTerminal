@@ -167,6 +167,8 @@ typedef struct {
     int charset;  /* current charset */
     int icharset; /* selected charset for sequence */
     int *tabs;
+    int lastLine; /* Last used lines of the terminal*/
+    int altLastLine; /* Last lines used of the alternalte screen */
     Rune lastc;   /* last printed char outside of sequence, 0 if control */
 } Term;
 

@@ -11,20 +11,20 @@
 #include <QPoint>
 #include <QLayout>
 #include <QGraphicsAnchorLayout>
-#include <QPoint>
 
 #if DEBUGGING
     #include <QDebug>
 #endif
 
-QLightTerminal::QLightTerminal(int maxLines, QWidget *parent): QWidget(parent), scrollbar(Qt::Orientation::Vertical), boxLayout(this)
-{
-    maxLineCount = maxLines;
+QLightTerminal::QLightTerminal(int maxLines, QWidget *parent): QWidget(parent), scrollbar(Qt::Orientation::Vertical), boxLayout(this), cursorTimer(this),
+    win{0,200,0,0, 0,100.0,14, 0, 2, 8, QPoint(0,0)}
+{  
+    win.maxLineCount = maxLines;
 
     // setup default style
-    setStyleSheet("background: #161616; font-size: 14px; font-weight: 500;");
-    setFont(QFont("mono"));
-    lineheight = fontMetrics().lineSpacing()*1.25;
+    setStyleSheet("background: #181818; font-size: 14px; font-weight: 500;");
+    setFont(QFont("Source Code Pro"));
+    win.lineheight = fontMetrics().lineSpacing()*1.25;
 
     // set up scrollbar
     boxLayout.setSpacing(0);
@@ -34,28 +34,53 @@ QLightTerminal::QLightTerminal(int maxLines, QWidget *parent): QWidget(parent), 
 
     connect(&scrollbar, &QScrollBar::valueChanged, this, &QLightTerminal::scrollX);
 
-    viewPortHeight = height/lineheight;
-    setupScrollbar(maxLines);
+    win.viewPortHeight = win.height/win.lineheight;
+    setupScrollbar(win.viewPortHeight);
 
     // set up terminal
     st = new SimpleTerminal(maxLines);
 
     connect(st, &SimpleTerminal::s_error, this, [](QString error){ qDebug() << "Error from st: " << error;});
     connect(st, &SimpleTerminal::updateView, this, &QLightTerminal::updateTerminal);
+
+    // set up blinking cursor
+    connect(&cursorTimer, &QTimer::timeout, this, [this](){
+        cursorVisible = !cursorVisible;
+        update(win.cursorPos.x()-1, win.cursorPos.y() - fontMetrics().lineSpacing(), 8, win.lineheight);
+    });
+    cursorTimer.start(750);
 }
 
 void QLightTerminal::updateTerminal(Term* term){
+    cursorVisible = true;
+    cursorTimer.start(750);
+
+    if(term->lastLine != win.viewPortMaxScrollY){
+        win.viewPortMaxScrollY = term->lastLine;
+
+        double newMax = MAX(win.viewPortMaxScrollY - win.viewPortHeight, 0)*win.scrollMultiplier;
+        bool bottom = scrollbar.value() == scrollbar.maximum();
+
+        scrollbar.setMaximum(newMax);
+        scrollbar.setPageStep(win.viewPortHeight*win.scrollMultiplier);
+
+        // stick to bottom
+        if(bottom){
+            scrollbar.setValue(newMax);
+            win.viewPortScrollY = (scrollbar.maximum() - scrollbar.value())/win.scrollMultiplier;
+        }
+    }
+
     update();
 }
 
 void QLightTerminal::scrollX(int x)
 {
-    viewPortScrollX = maxLineCount - viewPortHeight - x/scrollMultiplier;
+    win.viewPortScrollY = (scrollbar.maximum() - scrollbar.value())/win.scrollMultiplier;
     update();
 }
 
 void QLightTerminal::paintEvent(QPaintEvent *event){
-
     QPainter painter(this);
     painter.setBackgroundMode(Qt::BGMode::OpaqueMode);
 
@@ -65,18 +90,24 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     int offset;
     bool changed = false;
 
-    // apply a padding of two 2 lines
-    double start = MAX(MIN(st->term.c.y-viewPortScrollX+2, maxLineCount), viewPortHeight);
-    double end = MAX(0, start-viewPortHeight - 2);
-    double yPos = viewPortHeight*lineheight + ((int) start - start)*lineheight;
+    // caluate the view port
+    double lastline = win.viewPortMaxScrollY - win.viewPortScrollY; // last line which should be drawn
+    double drawOffset = event->rect().y()/win.lineheight;
+    double drawHeight = event->rect().height()/win.lineheight;
+    double start = lastline - drawHeight - drawOffset;
+    start = MAX(start+1, 0);
+    double end = start + drawHeight;
+    end = MIN(end, win.maxLineCount);
 
-    // draw the terminal text
-    int i = start;
-    while(i > end){
+    int i = end;
+    int stop = start;
+    double yPos = (drawOffset + drawHeight - 1)*win.lineheight;
+
+    while(i > stop){
         i--;
 
         st->term.dirty[i] = 0;
-        offset = hPadding;
+        offset = win.hPadding;
         line = QString();
         Glyph* tLine = st->term.line[i];
 
@@ -93,7 +124,6 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
                 bgColor = tLine[j].bg;
                 changed = true;
             }
-
 
             // draw line state now and change color
             if(changed){
@@ -119,11 +149,15 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
             line += QChar(st->term.line[i][j].u);
         }
         painter.drawText(QPoint(offset,yPos), line);
-        yPos -= lineheight;
+        yPos -= win.lineheight;
     }
 
+    if(!cursorVisible){
+        return;
+    }
 
     // draw cursor
+    painter.setBackgroundMode(Qt::BGMode::TransparentMode);
     line = QString();
 
     for(int i = 0; i < st->term.c.x; i++) {
@@ -132,7 +166,8 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     int cursorOffset = QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
 
     painter.setPen(colors[st->term.c.attr.fg]);
-    painter.drawText(QPoint(cursorOffset + hPadding,(st->term.c.y+1)*lineheight), QChar(st->term.c.attr.u));
+    win.cursorPos = QPoint(cursorOffset + win.hPadding, (MIN(st->term.c.y+1, win.viewPortHeight-1)+win.viewPortScrollY)*win.lineheight - win.vPadding);
+    painter.drawText(win.cursorPos, QChar(st->term.c.attr.u));
 
    /**
     *  TODO Add later
@@ -206,21 +241,22 @@ void QLightTerminal::mousePressEvent(QMouseEvent *event){
 
 void QLightTerminal::resizeEvent(QResizeEvent *event)
 {
-    height = event->size().height();
-    viewPortHeight = height/lineheight;
+    win.height = event->size().height();
+    win.width = event->size().width();
+    win.viewPortHeight = win.height/win.lineheight;
 
     // multiply by 100 to allow for smoother scrolling
-    scrollbar.setMaximum((maxLineCount-viewPortHeight)*scrollMultiplier);
+    scrollbar.setMaximum((win.maxLineCount-win.viewPortHeight)*win.scrollMultiplier);
 
     int col;
     // TODO: figure out why fontMetrics().maxWidth() is returning wrong size;
     // for now replaced with 8.5
 
-    col = (event->size().width() - 2 * hPadding) / 8.5;
+    col = (event->size().width() - 2 * win.hPadding) / 8.5;
     col = MAX(1, col);
 
-    st->tresize(col, maxLineCount);
-    st->ttyresize(col*8.5, maxLineCount*lineheight);
+    st->tresize(col, win.maxLineCount);
+    st->ttyresize(col*8.5, win.maxLineCount*win.lineheight);
 
     update();
 
@@ -249,7 +285,7 @@ void QLightTerminal::wheelEvent(QWheelEvent *event)
 }
 
 void QLightTerminal::setupScrollbar(int maxLines){
-    double scrollHeight = (maxLines-viewPortHeight)*scrollMultiplier;
+    double scrollHeight = (maxLines-win.viewPortHeight)*win.scrollMultiplier;
     scrollbar.setMaximum(scrollHeight);
     scrollbar.setValue(scrollHeight);
     scrollbar.setPageStep(scrollHeight/10);

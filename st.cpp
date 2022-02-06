@@ -792,6 +792,7 @@ void SimpleTerminal::tnewline(int first_col)
         tscrollup(term.top, 1);
     } else {
         y++;
+        term.lastLine++;
     }
     tmoveto(first_col ? 0 : term.c.x, y);
 }
@@ -1647,6 +1648,8 @@ void SimpleTerminal::treset(void)
     term.top = 0;
     term.bot = term.row - 1;
     term.mode = MODE_WRAP|MODE_UTF8;
+    term.lastLine = 0;
+    term.altLastLine = 0;
     memset(term.trantbl, CS_USA, sizeof(term.trantbl));
     term.charset = 0;
 
@@ -1664,6 +1667,11 @@ void SimpleTerminal::tswapscreen(void)
 
     term.line = term.alt;
     term.alt = tmp;
+
+    int tmpLastLine = term.lastLine;
+    term.lastLine = term.altLastLine;
+    term.altLastLine = tmpLastLine;
+
     term.mode ^= MODE_ALTSCREEN;
     tfulldirt();
 }
