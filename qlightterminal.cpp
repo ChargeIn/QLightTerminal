@@ -58,7 +58,7 @@ void QLightTerminal::updateTerminal(Term* term){
     if(term->lastLine != win.viewPortMaxScrollY){
         win.viewPortMaxScrollY = term->lastLine;
 
-        double newMax = MAX(win.viewPortMaxScrollY - win.viewPortHeight, 0)*win.scrollMultiplier;
+        double newMax = MAX(win.viewPortMaxScrollY + 1 - win.viewPortHeight, 0)*win.scrollMultiplier;
         bool bottom = scrollbar.value() == scrollbar.maximum();
 
         scrollbar.setMaximum(newMax);
@@ -89,19 +89,27 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     uint32_t bgColor = 0;
     int offset;
     bool changed = false;
+    double lastViewPortIndex = win.viewPortHeight -1;
 
     // caluate the view port
-    double lastline = win.viewPortMaxScrollY - win.viewPortScrollY; // last line which should be drawn
-    double drawOffset = event->rect().y()/win.lineheight;
-    double drawHeight = event->rect().height()/win.lineheight;
-    double start = lastline - drawHeight - drawOffset;
-    start = MAX(start+1, 0);
-    double end = start + drawHeight;
-    end = MIN(end, win.maxLineCount);
+    double drawOffset = MIN(event->rect().y() - win.vPadding, 0)/win.lineheight;    // line index offset of the viewPort
+    double drawHeight = (event->rect().height())/win.lineheight;                    // height of the viewPort in lines
+    double drawEnd = drawOffset + drawHeight;                                       // last line index of the viewPort
 
-    int i = end;
-    int stop = start;
-    double yPos = (drawOffset + drawHeight - 1)*win.lineheight;
+    double lastTLine = MAX(win.viewPortMaxScrollY, lastViewPortIndex);              // last line of the terminal
+
+    double firstViewPortLine = lastTLine - win.viewPortScrollY - lastViewPortIndex; // index of the first line in range of the view port
+    double lastViewPortLine = MIN(firstViewPortLine + drawEnd, win.maxLineCount);   // index of the last line in range of the viewPort
+
+    int yPos = (drawEnd -1)*win.lineheight + win.vPadding;                          // y position of the the lastViewPortLine
+
+    int i = lastViewPortLine;
+    int stop = MAX(i - drawHeight, 0);
+
+    if(i < win.maxLineCount){
+        yPos += win.lineheight;
+        i++;
+    }
 
     while(i > stop){
         i--;
@@ -166,7 +174,11 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     int cursorOffset = QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
 
     painter.setPen(colors[st->term.c.attr.fg]);
-    win.cursorPos = QPoint(cursorOffset + win.hPadding, (MIN(st->term.c.y+1, win.viewPortHeight-1)+win.viewPortScrollY)*win.lineheight - win.vPadding);
+
+    double cursorPos = MIN(st->term.c.y+1, (int) win.viewPortHeight); // line of the cursor
+    double scrolledCursor = cursorPos +(int) win.viewPortScrollY; // apply scroll offset
+
+    win.cursorPos = QPoint(cursorOffset + win.hPadding, scrolledCursor*win.lineheight - win.vPadding);
     painter.drawText(win.cursorPos, QChar(st->term.c.attr.u));
 
    /**
@@ -243,10 +255,11 @@ void QLightTerminal::resizeEvent(QResizeEvent *event)
 {
     win.height = event->size().height();
     win.width = event->size().width();
-    win.viewPortHeight = win.height/win.lineheight;
+    win.viewPortHeight = (win.height-win.vPadding*2)/win.lineheight;
 
     // multiply by 100 to allow for smoother scrolling
-    scrollbar.setMaximum((win.maxLineCount-win.viewPortHeight)*win.scrollMultiplier);
+    double newMax = MAX(win.viewPortMaxScrollY + 1 - win.viewPortHeight, 0)*win.scrollMultiplier;
+    scrollbar.setMaximum(newMax);
 
     int col;
     // TODO: figure out why fontMetrics().maxWidth() is returning wrong size;
@@ -286,8 +299,8 @@ void QLightTerminal::wheelEvent(QWheelEvent *event)
 
 void QLightTerminal::setupScrollbar(int maxLines){
     double scrollHeight = (maxLines-win.viewPortHeight)*win.scrollMultiplier;
-    scrollbar.setMaximum(scrollHeight);
-    scrollbar.setValue(scrollHeight);
+    scrollbar.setMaximum(0); // will set in the update Terminal function
+    scrollbar.setValue(0);
     scrollbar.setPageStep(scrollHeight/10);
     scrollbar.setStyleSheet(R"(
                         QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
