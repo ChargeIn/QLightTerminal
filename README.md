@@ -6,6 +6,7 @@
 ![Terminal Preview](https://github.com/ChargeIn/QLightTerm/blob/master/example/demo.png)
 
 A simple lightweight terminal widget for Qt6.
+
 ---
 ## License
 >You can check out the full license [here](https://github.com/ChargeIn/QLightTerm/blob/master/LICENSE)
