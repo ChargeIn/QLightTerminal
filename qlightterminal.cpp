@@ -81,7 +81,7 @@ void QLightTerminal::updateTerminal(Term* term){
 
 void QLightTerminal::scrollX(int x)
 {
-    win.viewPortScrollY = (scrollbar.maximum() - scrollbar.value())/win.scrollMultiplier;
+    win.viewPortScrollY = (scrollbar.maximum() - x)/win.scrollMultiplier;
     update();
 }
 
