@@ -59,15 +59,20 @@ void QLightTerminal::updateTerminal(Term* term){
         win.viewPortMaxScrollY = term->lastLine;
 
         double newMax = MAX(win.viewPortMaxScrollY + 1 - win.viewPortHeight, 0)*win.scrollMultiplier;
-        bool bottom = scrollbar.value() == scrollbar.maximum();
 
-        scrollbar.setMaximum(newMax);
-        scrollbar.setPageStep(win.viewPortHeight*win.scrollMultiplier);
+        if(newMax != scrollbar.maximum()){
+            scrollbar.setVisible(newMax > 0.1);
 
-        // stick to bottom
-        if(bottom){
-            scrollbar.setValue(newMax);
-            win.viewPortScrollY = (scrollbar.maximum() - scrollbar.value())/win.scrollMultiplier;
+            bool bottom = scrollbar.value() == scrollbar.maximum();
+
+            scrollbar.setMaximum(newMax);
+            scrollbar.setPageStep(win.viewPortHeight*win.scrollMultiplier);
+
+            // stick to bottom
+            if(bottom){
+                scrollbar.setValue(newMax);
+                win.viewPortScrollY = (scrollbar.maximum() - scrollbar.value())/win.scrollMultiplier;
+            }
         }
     }
 
@@ -301,6 +306,7 @@ void QLightTerminal::setupScrollbar(int maxLines){
     double scrollHeight = (maxLines-win.viewPortHeight)*win.scrollMultiplier;
     scrollbar.setMaximum(0); // will set in the update Terminal function
     scrollbar.setValue(0);
+    scrollbar.setVisible(false);
     scrollbar.setPageStep(scrollHeight/10);
     scrollbar.setStyleSheet(R"(
                         QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
@@ -309,6 +315,13 @@ void QLightTerminal::setupScrollbar(int maxLines){
 
                         QScrollBar::vertical  {
                             margin: 0;
+                            width: 9px;
+                            padding-right: 1px;
+                        }
+
+                        QScrollBar::handle {
+                            background: #aaaaaa;
+                            border-radius: 4px;
                         }
     )");
 }

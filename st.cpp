@@ -1,7 +1,4 @@
 #include "st.h"
-
-#include <QDebug>
-
 #include <stdio.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -820,6 +817,10 @@ void SimpleTerminal::tclearregion(int x1, int y1, int x2, int y2)
 {
     int x, y, temp;
     Glyph *gp;
+
+    if(term.lastLine <= y2 && term.lastLine > y1){
+        term.lastLine = y1;
+    }
 
     if (x1 > x2)
         temp = x1, x1 = x2, x2 = temp;
