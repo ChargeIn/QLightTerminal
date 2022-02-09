@@ -17,7 +17,7 @@
 #endif
 
 QLightTerminal::QLightTerminal(int maxLines, QWidget *parent): QWidget(parent), scrollbar(Qt::Orientation::Vertical), boxLayout(this), cursorTimer(this),
-    win{0,200,0,0, 0,100.0,14, 0, 2, 8, QPoint(0,0)}
+    win{0,200,0,0, 0,100,14, 0, 2, 8, QPoint(0,0)}
 {  
     win.maxLineCount = maxLines;
 
@@ -97,16 +97,16 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     double lastViewPortIndex = win.viewPortHeight -1;
 
     // caluate the view port
-    double drawOffset = MIN(event->rect().y() - win.vPadding, 0)/win.lineheight;    // line index offset of the viewPort
-    double drawHeight = (event->rect().height())/win.lineheight;                    // height of the viewPort in lines
-    double drawEnd = drawOffset + drawHeight;                                       // last line index of the viewPort
+    int drawOffset = MAX(event->rect().y() - win.vPadding, 0)/win.lineheight;    // line index offset of the viewPort
+    int drawHeight = (event->rect().height())/win.lineheight;                    // height of the viewPort in lines
+    int drawEnd = drawOffset + drawHeight;                                       // last line index of the viewPort
 
-    double lastTLine = MAX(win.viewPortMaxScrollY, lastViewPortIndex);              // last line of the terminal
+    int lastTLine = MAX(win.viewPortMaxScrollY, lastViewPortIndex);              // last line of the terminal
 
-    double firstViewPortLine = lastTLine - win.viewPortScrollY - lastViewPortIndex; // index of the first line in range of the view port
-    double lastViewPortLine = MIN(firstViewPortLine + drawEnd, win.maxLineCount);   // index of the last line in range of the viewPort
+    int firstViewPortLine = lastTLine - win.viewPortScrollY - lastViewPortIndex; // index of the first line in range of the view port
+    int lastViewPortLine = MIN(firstViewPortLine + drawEnd, win.maxLineCount);   // index of the last line in range of the viewPort
 
-    int yPos = (drawEnd -1)*win.lineheight + win.vPadding;                          // y position of the the lastViewPortLine
+    int yPos = drawEnd*win.lineheight + win.vPadding;                          // y position of the the lastViewPortLine
 
     int i = lastViewPortLine;
     int stop = MAX(i - drawHeight, 0);
@@ -115,6 +115,8 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
         yPos += win.lineheight;
         i++;
     }
+
+    qDebug() << i << ": " << stop  << ":: " << yPos << " : " << win.lineheight;
 
     while(i > stop){
         i--;
@@ -140,6 +142,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
             // draw line state now and change color
             if(changed){
+                qDebug() << line;
                 painter.drawText(QPoint(offset, yPos), line);
                 offset += QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
 
@@ -161,13 +164,12 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
             line += QChar(st->term.line[i][j].u);
         }
+        qDebug() << line;
         painter.drawText(QPoint(offset,yPos), line);
         yPos -= win.lineheight;
     }
 
-    if(!cursorVisible){
-        return;
-    }
+
 
     // draw cursor
     painter.setBackgroundMode(Qt::BGMode::TransparentMode);
@@ -183,7 +185,11 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     double cursorPos = MIN(st->term.c.y+1, (int) win.viewPortHeight); // line of the cursor
     double scrolledCursor = cursorPos +(int) win.viewPortScrollY; // apply scroll offset
 
-    win.cursorPos = QPoint(cursorOffset + win.hPadding, scrolledCursor*win.lineheight - win.vPadding);
+    win.cursorPos = QPoint(cursorOffset + win.hPadding, scrolledCursor*win.lineheight + win.vPadding);
+
+    if(!cursorVisible){
+        return;
+    }
     painter.drawText(win.cursorPos, QChar(st->term.c.attr.u));
 
    /**
@@ -254,6 +260,10 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
 
 void QLightTerminal::mousePressEvent(QMouseEvent *event){
     setFocus();
+
+    cursorVisible = true;
+    update(win.cursorPos.x()-1, win.cursorPos.y() - fontMetrics().lineSpacing(), 8, win.lineheight); // draw cursor
+    cursorTimer.start(750);
 }
 
 void QLightTerminal::resizeEvent(QResizeEvent *event)
@@ -300,6 +310,13 @@ void QLightTerminal::wheelEvent(QWheelEvent *event)
         scrollX(scrollbar.value());
         return;
     }
+}
+
+void QLightTerminal::focusOutEvent(QFocusEvent *event)
+{
+    cursorTimer.stop();
+    cursorVisible = false;
+    update(win.cursorPos.x()-1, win.cursorPos.y() - fontMetrics().lineSpacing(), 8, win.lineheight); // hide cursor
 }
 
 void QLightTerminal::setupScrollbar(int maxLines){

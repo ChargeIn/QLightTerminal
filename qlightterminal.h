@@ -26,12 +26,12 @@ typedef struct {
 typedef struct {
    int width;
    int height;
-   double viewPortHeight; // number of lines visible
+   int viewPortHeight; // number of lines visible
    double viewPortScrollY; // number of lines scrolled down
-   double viewPortMaxScrollY; // maximum scrollable lines
-   double scrollMultiplier; // allows for smooth scrolling
+   int viewPortMaxScrollY; // maximum scrollable lines
+   int scrollMultiplier; // allows for smooth scrolling
    double lineheight;
-   double maxLineCount;
+   int maxLineCount;
    int vPadding;
    int hPadding;
    QPoint cursorPos;
@@ -72,6 +72,8 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
     void wheelEvent(QWheelEvent *event) override;
+
+    void focusOutEvent(QFocusEvent *event) override;
 
 private:
     /*
