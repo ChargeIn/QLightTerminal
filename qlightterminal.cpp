@@ -11,6 +11,8 @@
 #include <QPoint>
 #include <QLayout>
 #include <QGraphicsAnchorLayout>
+#include <QClipboard>
+#include <QGuiApplication>
 
 #if DEBUGGING
     #include <QDebug>
@@ -116,8 +118,6 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
         i++;
     }
 
-    qDebug() << i << ": " << stop  << ":: " << yPos << " : " << win.lineheight;
-
     while(i > stop){
         i--;
 
@@ -142,7 +142,6 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
             // draw line state now and change color
             if(changed){
-                qDebug() << line;
                 painter.drawText(QPoint(offset, yPos), line);
                 offset += QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
 
@@ -164,11 +163,9 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
             line += QChar(st->term.line[i][j].u);
         }
-        qDebug() << line;
         painter.drawText(QPoint(offset,yPos), line);
         yPos -= win.lineheight;
     }
-
 
 
     // draw cursor
@@ -222,6 +219,20 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
  */
 void QLightTerminal::keyPressEvent(QKeyEvent *e){
     QString input = e->text();
+    Qt::KeyboardModifiers mods = e->modifiers();
+
+    // paste event
+    if(
+        e->key() == 86
+        && mods & Qt::KeyboardModifier::ShiftModifier
+        && mods & Qt::KeyboardModifier::ControlModifier)
+    {
+        QClipboard *clipboard = QGuiApplication::clipboard();
+        QString clippedText = clipboard->text();
+        QByteArray data = clippedText.toLocal8Bit();
+        st->ttywrite(data.data(), data.size(),1);
+        return;
+    }
 
     // normal input
     if(input != ""){
@@ -235,7 +246,6 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
     } else {
         // special keys
         // TODO: Add more short cuts
-        Qt::KeyboardModifiers mods = e->modifiers();
         int key = e->key();
         int end = 24;
 
@@ -247,7 +257,7 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
             int nextKey = keys[i].nextKey;
             if(key == keys[i].key){
                 for(int j = i; j < i + nextKey; j++){
-                    if(mods == keys[j].mods){
+                    if(mods & keys[j].mods){
                         st->ttywrite(keys[j].cmd, keys[j].cmd_size,1);
                         return;
                     }
