@@ -27,11 +27,8 @@ typedef struct {
    int width;
    int height;
    int viewPortHeight; // number of lines visible
-   double viewPortScrollY; // number of lines scrolled down
-   int viewPortMaxScrollY; // maximum scrollable lines
    int scrollMultiplier; // allows for smooth scrolling
    double lineheight;
-   int maxLineCount;
    int vPadding;
    int hPadding;
    QPoint cursorPos;
@@ -40,7 +37,7 @@ typedef struct {
 class QLightTerminal : public QWidget
 {
 public:
-    QLightTerminal(int maxLines = 200, QWidget *parent = nullptr);
+    QLightTerminal(QWidget *parent = nullptr);
 
 public slots:
     void updateTerminal(Term* term);

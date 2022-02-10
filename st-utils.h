@@ -63,6 +63,7 @@ enum selection_snap {
 #define ESC_ARG_SIZ   16
 #define STR_BUF_SIZ   ESC_BUF_SIZ
 #define STR_ARG_SIZ   ESC_ARG_SIZ
+#define HISTSIZE 1000
 
 /* macros */
 #define IS_SET(mode, flag)		((mode & (flag)) != 0)
@@ -70,6 +71,9 @@ enum selection_snap {
 #define ISCONTROLC1(c)		(BETWEEN(c, 0x80, 0x9f))
 #define ISCONTROL(c)		(ISCONTROLC0(c) || ISCONTROLC1(c))
 #define ISDELIM(u)		(u && wcschr(L" ", u))
+#define TLINE(term, y)		((y) < term.scr ? term.hist[((y) + term.histi - \
+                term.scr + HISTSIZE + 1) % HISTSIZE] : \
+                term.line[(y) - term.scr])
 
 typedef uint_least32_t Rune;
 
@@ -155,6 +159,9 @@ typedef struct {
     int col;      /* nb col */
     Line *line;   /* screen */
     Line *alt;    /* alternate screen */
+    Line hist[HISTSIZE]; /* history buffer */
+    int histi;    /* history index */
+    int scr;      /* scroll back */
     int *dirty;   /* dirtyness of lines */
     TCursor c;    /* cursor */
     int ocx;      /* old cursor col */
@@ -167,8 +174,6 @@ typedef struct {
     int charset;  /* current charset */
     int icharset; /* selected charset for sequence */
     int *tabs;
-    int lastLine; /* Last used lines of the terminal*/
-    int altLastLine; /* Last lines used of the alternalte screen */
     Rune lastc;   /* last printed char outside of sequence, 0 if control */
 } Term;
 

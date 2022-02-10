@@ -18,10 +18,11 @@
     #include <QDebug>
 #endif
 
-QLightTerminal::QLightTerminal(int maxLines, QWidget *parent): QWidget(parent), scrollbar(Qt::Orientation::Vertical), boxLayout(this), cursorTimer(this),
-    win{0,200,0,0, 0,100,14, 0, 2, 8, QPoint(0,0)}
+QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::Orientation::Vertical), boxLayout(this), cursorTimer(this),
+    win{0,0,0,100,14, 2, 8, QPoint(0,0)}
 {  
-    win.maxLineCount = maxLines;
+    // set up terminal
+    st = new SimpleTerminal();
 
     // setup default style
     setStyleSheet("background: #181818; font-size: 14px; font-weight: 500;");
@@ -39,9 +40,6 @@ QLightTerminal::QLightTerminal(int maxLines, QWidget *parent): QWidget(parent), 
     win.viewPortHeight = win.height/win.lineheight;
     setupScrollbar(win.viewPortHeight);
 
-    // set up terminal
-    st = new SimpleTerminal(maxLines);
-
     connect(st, &SimpleTerminal::s_error, this, [](QString error){ qDebug() << "Error from st: " << error;});
     connect(st, &SimpleTerminal::updateView, this, &QLightTerminal::updateTerminal);
 
@@ -57,33 +55,28 @@ void QLightTerminal::updateTerminal(Term* term){
     cursorVisible = true;
     cursorTimer.start(750);
 
-    if(term->lastLine != win.viewPortMaxScrollY){
-        win.viewPortMaxScrollY = term->lastLine;
+    if(st->term.histi != scrollbar.maximum()){
+        bool isMax = scrollbar.value() == scrollbar.value();
+        scrollbar.setMaximum(st->term.histi*win.scrollMultiplier);
 
-        double newMax = MAX(win.viewPortMaxScrollY + 1 - win.viewPortHeight, 0)*win.scrollMultiplier;
-
-        if(newMax != scrollbar.maximum()){
-            scrollbar.setVisible(newMax > 0.1);
-
-            bool bottom = scrollbar.value() == scrollbar.maximum();
-
-            scrollbar.setMaximum(newMax);
-            scrollbar.setPageStep(win.viewPortHeight*win.scrollMultiplier);
-
-            // stick to bottom
-            if(bottom){
-                scrollbar.setValue(newMax);
-                win.viewPortScrollY = (scrollbar.maximum() - scrollbar.value())/win.scrollMultiplier;
-            }
+        // stick to the bottom
+        if(isMax){
+            scrollbar.setValue(scrollbar.maximum());
         }
+        scrollbar.setVisible(scrollbar.maximum() != 0);
     }
-
     update();
 }
 
-void QLightTerminal::scrollX(int x)
+void QLightTerminal::scrollX(int n)
 {
-    win.viewPortScrollY = (scrollbar.maximum() - x)/win.scrollMultiplier;
+    int scroll = (st->term.scr - (scrollbar.maximum() - scrollbar.value())/win.scrollMultiplier);
+
+    if(scroll < 0){
+        st->kscrollup(-scroll);
+    } else {
+        st->kscrolldown(scroll);
+    }
     update();
 }
 
@@ -96,47 +89,40 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     uint32_t bgColor = 0;
     int offset;
     bool changed = false;
-    double lastViewPortIndex = win.viewPortHeight -1;
 
     // caluate the view port
-    int drawOffset = MAX(event->rect().y() - win.vPadding, 0)/win.lineheight;    // line index offset of the viewPort
-    int drawHeight = (event->rect().height())/win.lineheight;                    // height of the viewPort in lines
-    int drawEnd = drawOffset + drawHeight;                                       // last line index of the viewPort
+    int drawOffset = MAX(event->rect().y() - win.vPadding, 0)/win.lineheight;   // line index offset of the viewPort
+    int drawHeight = (event->rect().height())/win.lineheight;                   // height of the viewPort in lines
+    int drawEnd = drawOffset + drawHeight;                                      // last line index of the viewPort
 
-    int lastTLine = MAX(win.viewPortMaxScrollY, lastViewPortIndex);              // last line of the terminal
+    int yPos = win.viewPortHeight*win.lineheight + win.vPadding;                // y position of the the lastViewPortLine
 
-    int firstViewPortLine = lastTLine - win.viewPortScrollY - lastViewPortIndex; // index of the first line in range of the view port
-    int lastViewPortLine = MIN(firstViewPortLine + drawEnd, win.maxLineCount);   // index of the last line in range of the viewPort
-
-    int yPos = drawEnd*win.lineheight + win.vPadding;                          // y position of the the lastViewPortLine
-
-    int i = lastViewPortLine;
+    int i = drawEnd;
     int stop = MAX(i - drawHeight, 0);
-
-    if(i < win.maxLineCount){
-        yPos += win.lineheight;
-        i++;
-    }
 
     while(i > stop){
         i--;
 
-        st->term.dirty[i] = 0;
         offset = win.hPadding;
         line = QString();
-        Glyph* tLine = st->term.line[i];
+
+        // same logic as TLine from st-utils
+        Glyph* tLine = ((i) < st->term.scr ? st->term.hist[((i) + st->term.histi - \
+                                                    st->term.scr + HISTSIZE + 1) % HISTSIZE] : \
+                                                    st->term.line[(i) - st->term.scr]);
 
         for(int j = 0; j < st->term.col; j++){
-            if(tLine[j].mode == ATTR_WDUMMY)
+            Glyph g = tLine[j];
+            if(g.mode == ATTR_WDUMMY)
                     continue;
 
-            if(fgColor != tLine[j].fg){
-                fgColor = tLine[j].fg;
+            if(fgColor != g.fg){
+                fgColor = g.fg;
                 changed = true;
             }
 
-            if(bgColor != tLine[j].bg){
-                bgColor = tLine[j].bg;
+            if(bgColor != g.bg){
+                bgColor = g.bg;
                 changed = true;
             }
 
@@ -161,15 +147,19 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
                 changed = false;
             }
 
-            line += QChar(st->term.line[i][j].u);
+            line += QChar(g.u);
         }
         painter.drawText(QPoint(offset,yPos), line);
         yPos -= win.lineheight;
     }
 
+    if(st->term.scr != 0){
+        return; // do not draw cursor is scrolled
+    }
 
     // draw cursor
     painter.setBackgroundMode(Qt::BGMode::TransparentMode);
+    painter.setPen(colors[st->term.c.attr.fg]);
     line = QString();
 
     for(int i = 0; i < st->term.c.x; i++) {
@@ -177,12 +167,9 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     }
     int cursorOffset = QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
 
-    painter.setPen(colors[st->term.c.attr.fg]);
-
     double cursorPos = MIN(st->term.c.y+1, (int) win.viewPortHeight); // line of the cursor
-    double scrolledCursor = cursorPos +(int) win.viewPortScrollY; // apply scroll offset
 
-    win.cursorPos = QPoint(cursorOffset + win.hPadding, scrolledCursor*win.lineheight + win.vPadding);
+    win.cursorPos = QPoint(cursorOffset + win.hPadding, cursorPos*win.lineheight + win.vPadding);
 
     if(!cursorVisible){
         return;
@@ -282,10 +269,6 @@ void QLightTerminal::resizeEvent(QResizeEvent *event)
     win.width = event->size().width();
     win.viewPortHeight = (win.height-win.vPadding*2)/win.lineheight;
 
-    // multiply by 100 to allow for smoother scrolling
-    double newMax = MAX(win.viewPortMaxScrollY + 1 - win.viewPortHeight, 0)*win.scrollMultiplier;
-    scrollbar.setMaximum(newMax);
-
     int col;
     // TODO: figure out why fontMetrics().maxWidth() is returning wrong size;
     // for now replaced with 8.5
@@ -293,8 +276,8 @@ void QLightTerminal::resizeEvent(QResizeEvent *event)
     col = (event->size().width() - 2 * win.hPadding) / 8.5;
     col = MAX(1, col);
 
-    st->tresize(col, win.maxLineCount);
-    st->ttyresize(col*8.5, win.maxLineCount*win.lineheight);
+    st->tresize(col, win.viewPortHeight);
+    st->ttyresize(col*8.5, win.viewPortHeight*win.lineheight);
 
     update();
 
@@ -308,7 +291,7 @@ void QLightTerminal::wheelEvent(QWheelEvent *event)
 
     if (!numPixels.isNull()) {
         // TODO: test if this works << needs mouse with finer resolution
-        scrollbar.setValue(scrollbar.value() - numPixels.y()*1.5);
+        scrollbar.setValue(scrollbar.value() - numPixels.y()*2);
         scrollX(scrollbar.value());
         return;
     }
@@ -316,7 +299,7 @@ void QLightTerminal::wheelEvent(QWheelEvent *event)
     QPoint numDegrees = event->angleDelta();
 
     if (!numDegrees.isNull()) {
-        scrollbar.setValue(scrollbar.value() - numDegrees.y()*1.5);
+        scrollbar.setValue(scrollbar.value() - numDegrees.y()*2);
         scrollX(scrollbar.value());
         return;
     }
@@ -330,11 +313,10 @@ void QLightTerminal::focusOutEvent(QFocusEvent *event)
 }
 
 void QLightTerminal::setupScrollbar(int maxLines){
-    double scrollHeight = (maxLines-win.viewPortHeight)*win.scrollMultiplier;
     scrollbar.setMaximum(0); // will set in the update Terminal function
     scrollbar.setValue(0);
+    scrollbar.setPageStep(100*win.scrollMultiplier);
     scrollbar.setVisible(false);
-    scrollbar.setPageStep(scrollHeight/10);
     scrollbar.setStyleSheet(R"(
                         QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
                             height: 0;

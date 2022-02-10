@@ -15,7 +15,7 @@ class SimpleTerminal: public QObject
 public:
     Term term;
 
-    SimpleTerminal(int numOfLines, QObject *parent = nullptr);
+    SimpleTerminal(QObject *parent = nullptr);
 
     ~SimpleTerminal();
 
@@ -36,6 +36,9 @@ public:
     void ttywrite(const char *s, size_t n, int may_echo);
 
     void ttywriteraw(const char *s, size_t n);
+
+    void kscrollup(int n);
+    void kscrolldown(int n);
 
 public slots:
     size_t ttyread();
@@ -117,8 +120,8 @@ private:
     void tnewline(int first_col);
     void tinsertblank(int n);
     void tinsertblankline(int n);
-    void tscrollup(int orig, int n);
-    void tscrolldown(int orig, int n);
+    void tscrollup(int orig, int n, int copyhist);
+    void tscrolldown(int orig, int n, int copyhist);
     void tsetscroll(int t, int b);
     void tcursor(int mode);
     void tmoveato(int x, int y);

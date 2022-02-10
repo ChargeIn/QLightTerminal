@@ -17,11 +17,11 @@
  #include <libutil.h>
 #endif
 
-SimpleTerminal::SimpleTerminal(int col, QObject *parent): QObject(parent)
+SimpleTerminal::SimpleTerminal( QObject *parent): QObject(parent)
 {
     readBufSize = sizeof(readBuf)/sizeof(readBuf[0]);
 
-    tnew(80, col);
+    tnew(80, 80);
     ttynew();
 
     readNotifier = new QSocketNotifier(master, QSocketNotifier::Read);
@@ -190,7 +190,7 @@ size_t SimpleTerminal::ttyread()
 
 void SimpleTerminal::tresize(int col, int row)
 {
-    int i;
+    int i, j;
     int minrow = MIN(row, term.row);
     int mincol = MIN(col, term.col);
     int *bp;
@@ -229,6 +229,20 @@ void SimpleTerminal::tresize(int col, int row)
     if(term.line == NULL || term.alt == NULL || term.dirty == NULL || term.tabs == NULL){
         emit s_error("Error on resize");
         return;
+    }
+
+    for (i = 0; i < HISTSIZE; i++) {
+        term.hist[i] = (Line) ::realloc(term.hist[i], col * sizeof(Glyph));
+
+        if(term.hist[i] == NULL){
+            emit s_error("Error on resize");
+            return;
+        }
+
+        for (j = mincol; j < col; j++) {
+            term.hist[i][j] = term.c.attr;
+            term.hist[i][j].u = ' ';
+        }
     }
 
 
@@ -467,6 +481,8 @@ int SimpleTerminal::twrite(const char *buf, int size, int show_ctrl)
 void SimpleTerminal::ttywrite(const char *s, size_t n, int may_echo)
 {
     const char *next;
+
+    kscrolldown(term.scr);
 
     if (may_echo && IS_SET(term.mode, MODE_ECHO))
         twrite(s, n, 1);
@@ -786,41 +802,17 @@ void SimpleTerminal::tnewline(int first_col)
     int y = term.c.y;
 
     if (y == term.bot) {
-        tscrollup(term.top, 1);
+        tscrollup(term.top, 1,1);
     } else {
         y++;
-        term.lastLine++;
     }
     tmoveto(first_col ? 0 : term.c.x, y);
-}
-
-void SimpleTerminal::tscrollup(int orig, int n)
-{
-    int i;
-    Line temp;
-
-    LIMIT(n, 0, term.bot-orig+1);
-
-    tclearregion(0, orig, term.col-1, orig+n-1);
-    tsetdirt(orig+n, term.bot);
-
-    for (i = orig; i <= term.bot-n; i++) {
-        temp = term.line[i];
-        term.line[i] = term.line[i+n];
-        term.line[i+n] = temp;
-    }
-
-    selscroll(orig, -n);
 }
 
 void SimpleTerminal::tclearregion(int x1, int y1, int x2, int y2)
 {
     int x, y, temp;
     Glyph *gp;
-
-    if(term.lastLine <= y2 && term.lastLine > y1){
-        term.lastLine = y1;
-    }
 
     if (x1 > x2)
         temp = x1, x1 = x2, x2 = temp;
@@ -1282,11 +1274,11 @@ void SimpleTerminal::csihandle(void)
         break;
     case 'S': /* SU -- Scroll <n> line up */
         DEFAULT(csiescseq.arg[0], 1);
-        tscrollup(term.top, csiescseq.arg[0]);
+        tscrollup(term.top, csiescseq.arg[0], 0);
         break;
     case 'T': /* SD -- Scroll <n> line down */
         DEFAULT(csiescseq.arg[0], 1);
-        tscrolldown(term.top, csiescseq.arg[0]);
+        tscrolldown(term.top, csiescseq.arg[0], 0);
         break;
     case 'L': /* IL -- Insert <n> blank lines */
         DEFAULT(csiescseq.arg[0], 1);
@@ -1427,10 +1419,10 @@ int SimpleTerminal::tlinelen(int y)
 {
     int i = term.col;
 
-    if (term.line[y][i - 1].mode & ATTR_WRAP)
+    if (TLINE(term, y)[i - 1].mode & ATTR_WRAP)
         return i;
 
-    while (i > 0 && term.line[y][i - 1].u == ' ')
+    while (i > 0 && TLINE(term, y)[i - 1].u == ' ')
         --i;
 
     return i;
@@ -1464,15 +1456,49 @@ void SimpleTerminal::tinsertblank(int n)
 void SimpleTerminal::tinsertblankline(int n)
 {
     if (BETWEEN(term.c.y, term.top, term.bot))
-        tscrolldown(term.c.y, n);
+        tscrolldown(term.c.y, n, 0);
 }
 
-void SimpleTerminal::tscrolldown(int orig, int n)
+void SimpleTerminal::kscrolldown(int n)
+{
+    if (n < 0)
+        n = term.row + n;
+
+    if (n > term.scr)
+        n = term.scr;
+
+    if (term.scr > 0) {
+        term.scr -= n;
+        selscroll(0, -n);
+        tfulldirt();
+    }
+}
+
+void SimpleTerminal::kscrollup(int n)
+{
+    if (n < 0)
+        n = term.row + n;
+
+    if (term.scr <= HISTSIZE-n) {
+        term.scr += n;
+        selscroll(0, n);
+        tfulldirt();
+    }
+}
+
+void SimpleTerminal::tscrolldown(int orig, int n,int copyhist)
 {
     int i;
     Line temp;
 
     LIMIT(n, 0, term.bot-orig+1);
+
+    if (copyhist) {
+        term.histi = (term.histi - 1 + HISTSIZE) % HISTSIZE;
+        temp = term.hist[term.histi];
+        term.hist[term.histi] = term.line[term.bot];
+        term.line[term.bot] = temp;
+    }
 
     tsetdirt(orig, term.bot-n);
     tclearregion(0, term.bot-n+1, term.col-1, term.bot);
@@ -1483,7 +1509,38 @@ void SimpleTerminal::tscrolldown(int orig, int n)
         term.line[i-n] = temp;
     }
 
-    selscroll(orig, n);
+    if (term.scr == 0)
+        selscroll(orig, n);
+}
+
+void SimpleTerminal::tscrollup(int orig, int n, int copyhist)
+{
+    int i;
+    Line temp;
+
+    LIMIT(n, 0, term.bot-orig+1);
+
+    if (copyhist) {
+        term.histi = (term.histi + 1) % HISTSIZE;
+        temp = term.hist[term.histi];
+        term.hist[term.histi] = term.line[orig];
+        term.line[orig] = temp;
+    }
+
+    if (term.scr > 0 && term.scr < HISTSIZE)
+        term.scr = MIN(term.scr + n, HISTSIZE-1);
+
+    tclearregion(0, orig, term.col-1, orig+n-1);
+    tsetdirt(orig+n, term.bot);
+
+    for (i = orig; i <= term.bot-n; i++) {
+        temp = term.line[i];
+        term.line[i] = term.line[i+n];
+        term.line[i+n] = temp;
+    }
+
+    if (term.scr == 0)
+        selscroll(orig, -n);
 }
 
 /* for absolute user moves, when decom is set */
@@ -1544,7 +1601,7 @@ void SimpleTerminal::tdefutf8(char ascii)
 void SimpleTerminal::tdeleteline(int n)
 {
     if (BETWEEN(term.c.y, term.top, term.bot))
-        tscrollup(term.c.y, n);
+        tscrollup(term.c.y, n, 0);
 }
 
 /*
@@ -1583,7 +1640,7 @@ int SimpleTerminal::eschandle(uchar ascii)
         return 0;
     case 'D': /* IND -- Linefeed */
         if (term.c.y == term.bot) {
-            tscrollup(term.top, 1);
+            tscrollup(term.top, 1, 1);
         } else {
             tmoveto(term.c.x, term.c.y+1);
         }
@@ -1596,7 +1653,7 @@ int SimpleTerminal::eschandle(uchar ascii)
         break;
     case 'M': /* RI -- Reverse index */
         if (term.c.y == term.top) {
-            tscrolldown(term.top, 1);
+            tscrolldown(term.top, 1, 1);
         } else {
             tmoveto(term.c.x, term.c.y-1);
         }
@@ -1649,8 +1706,6 @@ void SimpleTerminal::treset(void)
     term.top = 0;
     term.bot = term.row - 1;
     term.mode = MODE_WRAP|MODE_UTF8;
-    term.lastLine = 0;
-    term.altLastLine = 0;
     memset(term.trantbl, CS_USA, sizeof(term.trantbl));
     term.charset = 0;
 
@@ -1668,10 +1723,6 @@ void SimpleTerminal::tswapscreen(void)
 
     term.line = term.alt;
     term.alt = tmp;
-
-    int tmpLastLine = term.lastLine;
-    term.lastLine = term.altLastLine;
-    term.altLastLine = tmpLastLine;
 
     term.mode ^= MODE_ALTSCREEN;
     tfulldirt();
@@ -1719,13 +1770,13 @@ char* SimpleTerminal::getsel(void)
         }
 
         if (sel.type == SEL_RECTANGULAR) {
-            gp = &term.line[y][sel.nb.x];
+            gp = &TLINE(term, y)[sel.nb.x];
             lastx = sel.ne.x;
         } else {
-            gp = &term.line[y][sel.nb.y == y ? sel.nb.x : 0];
+            gp = &TLINE(term, y)[sel.nb.y == y ? sel.nb.x : 0];
             lastx = (sel.ne.y == y) ? sel.ne.x : term.col-1;
         }
-        last = &term.line[y][MIN(lastx, linelen-1)];
+        last = &TLINE(term, y)[MIN(lastx, linelen-1)];
         while (last >= gp && last->u == ' ')
             --last;
 
@@ -1851,7 +1902,7 @@ void SimpleTerminal::selsnap(int *x, int *y, int direction)
          * Snap around if the word wraps around at the end or
          * beginning of a line.
          */
-        prevgp = &term.line[*y][*x];
+        prevgp = &TLINE(term, *y)[*x];
         prevdelim = ISDELIM(prevgp->u);
         for (;;) {
             newx = *x + direction;
@@ -1866,14 +1917,14 @@ void SimpleTerminal::selsnap(int *x, int *y, int direction)
                     yt = *y, xt = *x;
                 else
                     yt = newy, xt = newx;
-                if (!(term.line[yt][xt].mode & ATTR_WRAP))
+                if (!(TLINE(term, yt)[xt].mode & ATTR_WRAP))
                     break;
             }
 
             if (newx >= tlinelen(newy))
                 break;
 
-            gp = &term.line[newy][newx];
+            gp = &TLINE(term, newy)[newx];
             delim = ISDELIM(gp->u);
             if (!(gp->mode & ATTR_WDUMMY) && (delim != prevdelim
                     || (delim && gp->u != prevgp->u)))
@@ -1894,15 +1945,13 @@ void SimpleTerminal::selsnap(int *x, int *y, int direction)
         *x = (direction < 0) ? 0 : term.col - 1;
         if (direction < 0) {
             for (; *y > 0; *y += direction) {
-                if (!(term.line[*y-1][term.col-1].mode
-                        & ATTR_WRAP)) {
+                if (!(TLINE(term, *y-1)[term.col-1].mode & ATTR_WRAP)) {
                     break;
                 }
             }
         } else if (direction > 0) {
             for (; *y < term.row-1; *y += direction) {
-                if (!(term.line[*y][term.col-1].mode
-                        & ATTR_WRAP)) {
+                if (!(TLINE(term, *y)[term.col-1].mode & ATTR_WRAP)) {
                     break;
                 }
             }
