@@ -101,7 +101,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
     int yPos = win.viewPortHeight*win.lineheight + win.vPadding;                // y position of the the lastViewPortLine
 
-    int i = drawEnd;
+    int i = MIN(drawEnd, win.viewPortHeight);
     int stop = MAX(i - drawHeight, 0);
     int temp;
 
@@ -284,7 +284,7 @@ void QLightTerminal::mousePressEvent(QMouseEvent *event){
 }
 
 void QLightTerminal::mouseDoubleClickEvent(QMouseEvent *event){
-   // TODO
+    // TODO
 }
 
 void QLightTerminal::resizeEvent(QResizeEvent *event)
@@ -302,8 +302,6 @@ void QLightTerminal::resizeEvent(QResizeEvent *event)
 
     st->tresize(col, win.viewPortHeight);
     st->ttyresize(col*8.5, win.viewPortHeight*win.lineheight);
-
-    update();
 
     event->accept();
 }
