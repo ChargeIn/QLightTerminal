@@ -13,6 +13,7 @@
 #include <QGraphicsAnchorLayout>
 #include <QClipboard>
 #include <QGuiApplication>
+#include <QPointF>
 
 #if DEBUGGING
     #include <QDebug>
@@ -38,7 +39,7 @@ QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::
     connect(&scrollbar, &QScrollBar::valueChanged, this, &QLightTerminal::scrollX);
 
     win.viewPortHeight = win.height/win.lineheight;
-    setupScrollbar(win.viewPortHeight);
+    setupScrollbar();
 
     connect(st, &SimpleTerminal::s_error, this, [](QString error){ qDebug() << "Error from st: " << error;});
     connect(st, &SimpleTerminal::updateView, this, &QLightTerminal::updateTerminal);
@@ -87,6 +88,9 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     QString line;
     uint32_t fgColor = 0;
     uint32_t bgColor = 0;
+    uint32_t cfgColor = 0; // control for change
+    uint32_t cbgColor = 0; // controll for change
+    ushort mode = -1;
     int offset;
     bool changed = false;
 
@@ -99,6 +103,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
     int i = drawEnd;
     int stop = MAX(i - drawHeight, 0);
+    int temp;
 
     while(i > stop){
         i--;
@@ -116,14 +121,37 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
             if(g.mode == ATTR_WDUMMY)
                     continue;
 
-            if(fgColor != g.fg){
+            if(cfgColor != g.fg){
                 fgColor = g.fg;
+                cfgColor = g.fg;
                 changed = true;
             }
 
-            if(bgColor != g.bg){
+            if(cbgColor != g.bg){
                 bgColor = g.bg;
+                cbgColor = g.bg;
                 changed = true;
+            }
+
+            if(mode != g.mode){
+                mode = g.mode;
+                changed = true;
+
+                if ((g.mode & ATTR_BOLD_FAINT) == ATTR_FAINT) {
+                    painter.setOpacity(0.5);
+                } else {
+                    painter.setOpacity(1);
+                }
+
+                if (g.mode & ATTR_REVERSE) {
+                    qDebug() << g.mode;
+                    temp = fgColor;
+                    fgColor = bgColor;
+                    bgColor = temp;
+                }
+
+                if (g.mode & ATTR_INVISIBLE)
+                    fgColor = bgColor;
             }
 
             // draw line state now and change color
@@ -187,16 +215,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
             fg = &revfg;
         }
 
-        if (base.mode & ATTR_REVERSE) {
-            temp = fg;
-            fg = bg;
-            bg = temp;
-        }
-
         if (base.mode & ATTR_BLINK && win.mode & MODE_BLINK)
-            fg = bg;
-
-        if (base.mode & ATTR_INVISIBLE)
             fg = bg;
     */
 }
@@ -244,7 +263,7 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
             int nextKey = keys[i].nextKey;
             if(key == keys[i].key){
                 for(int j = i; j < i + nextKey; j++){
-                    if(mods & keys[j].mods){
+                    if(mods.testFlag(keys[j].mods)){
                         st->ttywrite(keys[j].cmd, keys[j].cmd_size,1);
                         return;
                     }
@@ -258,9 +277,14 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
 void QLightTerminal::mousePressEvent(QMouseEvent *event){
     setFocus();
 
+    // draw cursor
     cursorVisible = true;
     update(win.cursorPos.x()-1, win.cursorPos.y() - fontMetrics().lineSpacing(), 8, win.lineheight); // draw cursor
     cursorTimer.start(750);
+}
+
+void QLightTerminal::mouseDoubleClickEvent(QMouseEvent *event){
+   // TODO
 }
 
 void QLightTerminal::resizeEvent(QResizeEvent *event)
@@ -312,7 +336,7 @@ void QLightTerminal::focusOutEvent(QFocusEvent *event)
     update(win.cursorPos.x()-1, win.cursorPos.y() - fontMetrics().lineSpacing(), 8, win.lineheight); // hide cursor
 }
 
-void QLightTerminal::setupScrollbar(int maxLines){
+void QLightTerminal::setupScrollbar(){
     scrollbar.setMaximum(0); // will set in the update Terminal function
     scrollbar.setValue(0);
     scrollbar.setPageStep(100*win.scrollMultiplier);

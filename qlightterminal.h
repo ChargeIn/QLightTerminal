@@ -57,14 +57,12 @@ private:
 
     double cursorVisible = true;
 
-    void setupScrollbar(int maxLines);
+    void setupScrollbar();
 
     void paintEvent(QPaintEvent *event) override;
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
-
-    void mousePressEvent ( QMouseEvent * event ) override;
 
     void resizeEvent(QResizeEvent *event) override;
 
@@ -72,12 +70,16 @@ protected:
 
     void focusOutEvent(QFocusEvent *event) override;
 
+    void mousePressEvent ( QMouseEvent * event ) override;
+
+    void mouseDoubleClickEvent( QMouseEvent * event ) override;
+
 private:
     /*
      * Special Keyboard Character
      */
     constexpr static const SpecialKey keys[25] = {
-        { Qt::Key_Left, Qt::NoModifier, "\033[D", 3, 4},
+        { Qt::Key_Left, Qt::KeyboardModifier::NoModifier, "\033[D", 3, 4},
         { Qt::Key_Left, Qt::ShiftModifier, "\033[1;2D", 7, 3},
         { Qt::Key_Left, Qt::AltModifier, "\033[1;3D", 7, 2},
         { Qt::Key_Left, Qt::ControlModifier, "\033[1;5D", 7, 1},

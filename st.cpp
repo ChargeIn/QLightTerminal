@@ -2254,6 +2254,50 @@ void SimpleTerminal::ttyresize(int tw, int th)
     }
 }
 
+void SimpleTerminal::selstart(int col, int row, int snap)
+{
+    selclear();
+    sel.mode = SEL_EMPTY;
+    sel.type = SEL_REGULAR;
+    sel.alt = IS_SET(term.mode, MODE_ALTSCREEN);
+    sel.snap = snap;
+    sel.oe.x = sel.ob.x = col;
+    sel.oe.y = sel.ob.y = row;
+    selnormalize();
+
+    if (sel.snap != 0)
+        sel.mode = SEL_READY;
+    tsetdirt(sel.nb.y, sel.ne.y);
+}
+
+void SimpleTerminal::selextend(int col, int row, int type, int done)
+{
+    int oldey, oldex, oldsby, oldsey, oldtype;
+
+    if (sel.mode == SEL_IDLE)
+        return;
+    if (done && sel.mode == SEL_EMPTY) {
+        selclear();
+        return;
+    }
+
+    oldey = sel.oe.y;
+    oldex = sel.oe.x;
+    oldsby = sel.nb.y;
+    oldsey = sel.ne.y;
+    oldtype = sel.type;
+
+    sel.oe.x = col;
+    sel.oe.y = row;
+    selnormalize();
+    sel.type = type;
+
+    if (oldey != sel.oe.y || oldex != sel.oe.x || oldtype != sel.type || sel.mode == SEL_EMPTY)
+        tsetdirt(MIN(sel.nb.y, oldsby), MAX(sel.ne.y, oldsey));
+
+    sel.mode = done ? SEL_IDLE : SEL_READY;
+}
+
 
 // ------------------------------ TODO ------------------------
 void SimpleTerminal::xsetsel(char *strvtiden)

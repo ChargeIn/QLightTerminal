@@ -38,7 +38,18 @@ public:
     void ttywriteraw(const char *s, size_t n);
 
     void kscrollup(int n);
+
     void kscrolldown(int n);
+
+    void tdumpsel(void);
+
+    char* getsel(void);
+
+    void selstart(int col, int row, int snap);
+
+    void selextend(int col, int row, int type, int done);
+
+    void selsnap(int *x, int *y, int direction);
 
 public slots:
     size_t ttyread();
@@ -133,15 +144,12 @@ private:
     int  eschandle(uchar ascii);
     void treset(void);
     void tfulldirt(void);
-    void tdumpsel(void);
-    char* getsel(void);
     void osc_color_response(int index, int num);
     void redraw(void);
     void draw(void);
     char* base64dec(const char *src);
     char base64dec_getc(const char **src);
     void osc4_color_response(int num);
-    void selsnap(int *x, int *y, int direction);
     void tsetattr(const int *attr, int l);
     int32_t tdefcolor(const int *attr, int *npar, int l);
     void xsetmode(int set, unsigned int flags);
