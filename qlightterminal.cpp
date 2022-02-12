@@ -20,15 +20,16 @@
 #endif
 
 QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::Orientation::Vertical), boxLayout(this), cursorTimer(this),
-    win{0,0,0,100,14, 2, 8, QPoint(0,0)}
+    win{0,0,0,100,14, 8.5, 2, 8, QPoint(0,0)}
 {  
     // set up terminal
     st = new SimpleTerminal();
 
     // setup default style
     setStyleSheet("background: #181818; font-size: 14px; font-weight: 500;");
-    setFont(QFont("Source Code Pro"));
-    win.lineheight = fontMetrics().lineSpacing()*1.25;
+    setFont(QFont("Mono")); // terminal is based on monospace fonts
+    int linespacing = fontMetrics().lineSpacing();
+    win.lineheight = linespacing*1.25;
 
     // set up scrollbar
     boxLayout.setSpacing(0);
@@ -47,7 +48,7 @@ QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::
     // set up blinking cursor
     connect(&cursorTimer, &QTimer::timeout, this, [this](){
         cursorVisible = !cursorVisible;
-        update(win.cursorPos.x()-1, win.cursorPos.y() - fontMetrics().lineSpacing(), 8, win.lineheight);
+        update(win.cursorPos.x() - 0.1, win.cursorPos.y() - 14, 10, win.lineheight);
     });
     cursorTimer.start(750);
 }
@@ -89,7 +90,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     uint32_t fgColor = 0;
     uint32_t bgColor = 0;
     uint32_t cfgColor = 0; // control for change
-    uint32_t cbgColor = 0; // controll for change
+    uint32_t cbgColor = 0; // control for change
     ushort mode = -1;
     int offset;
     bool changed = false;
@@ -99,10 +100,10 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     int drawHeight = (event->rect().height())/win.lineheight;                   // height of the viewPort in lines
     int drawEnd = drawOffset + drawHeight;                                      // last line index of the viewPort
 
-    int yPos = win.viewPortHeight*win.lineheight + win.vPadding;                // y position of the the lastViewPortLine
-
     int i = MIN(drawEnd, win.viewPortHeight);
     int stop = MAX(i - drawHeight, 0);
+    int yPos = i*win.lineheight + win.vPadding;                // y position of the the lastViewPortLine
+
     int temp;
 
     while(i > stop){
@@ -285,6 +286,11 @@ void QLightTerminal::mousePressEvent(QMouseEvent *event){
 
 void QLightTerminal::mouseDoubleClickEvent(QMouseEvent *event){
     // TODO
+    QPointF pos = event->position();
+    int col = (pos.x() - win.hPadding)/win.charWith;
+    int row = (pos.y() - win.vPadding)/win.lineheight;
+
+    st->selstart(col, row, SNAP_WORD);
 }
 
 void QLightTerminal::resizeEvent(QResizeEvent *event)
@@ -295,9 +301,9 @@ void QLightTerminal::resizeEvent(QResizeEvent *event)
 
     int col;
     // TODO: figure out why fontMetrics().maxWidth() is returning wrong size;
-    // for now replaced with 8.5
+    // for now replaced with 8.5 (win.charWidth)
 
-    col = (event->size().width() - 2 * win.hPadding) / 8.5;
+    col = (event->size().width() - 2 * win.hPadding) / win.charWith;
     col = MAX(1, col);
 
     st->tresize(col, win.viewPortHeight);

@@ -29,6 +29,7 @@ typedef struct {
    int viewPortHeight; // number of lines visible
    int scrollMultiplier; // allows for smooth scrolling
    double lineheight;
+   double charWith;
    int vPadding;
    int hPadding;
    QPoint cursorPos;
