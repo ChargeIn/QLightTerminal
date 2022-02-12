@@ -51,6 +51,10 @@ public:
 
     void selsnap(int *x, int *y, int direction);
 
+    int  selected(int x, int y);
+
+    void selclear(void);
+
 public slots:
     size_t ttyread();
 
@@ -112,8 +116,6 @@ private:
     void tstrsequence(uchar c);
     void strreset(void);
     void tclearregion(int x1, int y1, int x2, int y2);
-    int  selected(int x, int y);
-    void selclear(void);
     void selscroll(int orig, int n);
     void selnormalize(void);
     void strhandle(void);

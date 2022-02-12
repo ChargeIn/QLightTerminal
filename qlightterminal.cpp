@@ -134,9 +134,15 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
                 changed = true;
             }
 
+            if(st->selected(j, i)){
+                g.mode ^= ATTR_REVERSE;
+            }
+
             if(mode != g.mode){
                 mode = g.mode;
                 changed = true;
+                fgColor = cfgColor; // reset color
+                bgColor = cbgColor;
 
                 if ((g.mode & ATTR_BOLD_FAINT) == ATTR_FAINT) {
                     painter.setOpacity(0.5);
@@ -145,7 +151,6 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
                 }
 
                 if (g.mode & ATTR_REVERSE) {
-                    qDebug() << g.mode;
                     temp = fgColor;
                     fgColor = bgColor;
                     bgColor = temp;
@@ -241,6 +246,19 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
         return;
     }
 
+    // copy event
+    if(
+        e->key() == 67
+        && mods & Qt::KeyboardModifier::ShiftModifier
+        && mods & Qt::KeyboardModifier::ControlModifier)
+    {
+        QClipboard *clipboard = QGuiApplication::clipboard();
+        QString clippedText = QString(st->getsel());
+        clipboard->setText(clippedText);
+        return;
+    }
+
+
     // normal input
     if(input != ""){
         QByteArray text;
@@ -278,6 +296,20 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
 void QLightTerminal::mousePressEvent(QMouseEvent *event){
     setFocus();
 
+    // reset old selection
+    st->selclear();
+    update();
+
+    // select line if tripple click
+    if(QDateTime::currentMSecsSinceEpoch() - lastClick < 500){
+        lastClick = 0;
+        QPointF pos = event->position();
+        int col = (pos.x() - win.hPadding)/win.charWith;
+        int row = (pos.y() - win.vPadding)/win.lineheight;
+
+        st->selstart(col, row, SNAP_LINE);
+    }
+
     // draw cursor
     cursorVisible = true;
     update(win.cursorPos.x()-1, win.cursorPos.y() - fontMetrics().lineSpacing(), 8, win.lineheight); // draw cursor
@@ -285,12 +317,16 @@ void QLightTerminal::mousePressEvent(QMouseEvent *event){
 }
 
 void QLightTerminal::mouseDoubleClickEvent(QMouseEvent *event){
-    // TODO
     QPointF pos = event->position();
     int col = (pos.x() - win.hPadding)/win.charWith;
     int row = (pos.y() - win.vPadding)/win.lineheight;
 
+    st->selclear();
     st->selstart(col, row, SNAP_WORD);
+
+    lastClick = QDateTime::currentMSecsSinceEpoch();
+
+    update();
 }
 
 void QLightTerminal::resizeEvent(QResizeEvent *event)

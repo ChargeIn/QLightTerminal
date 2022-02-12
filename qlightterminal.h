@@ -12,6 +12,7 @@
 #include <QKeyCombination>
 #include <QTimer>
 #include <QPoint>
+#include <QTime>
 
 #include "st.h"
 
@@ -76,6 +77,8 @@ protected:
     void mouseDoubleClickEvent( QMouseEvent * event ) override;
 
 private:
+    qint64 lastClick = 0;
+
     /*
      * Special Keyboard Character
      */
