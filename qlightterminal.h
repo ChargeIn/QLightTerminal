@@ -58,6 +58,8 @@ public slots:
 signals:
     void s_closed(); // emitted when the terminal is closed
 
+    void s_error(QString);
+
 protected:
     void keyPressEvent(QKeyEvent *event) override;
 

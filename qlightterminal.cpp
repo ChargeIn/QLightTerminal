@@ -15,10 +15,6 @@
 #include <QGuiApplication>
 #include <QPointF>
 
-#if DEBUGGING
-    #include <QDebug>
-#endif
-
 QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::Orientation::Vertical), boxLayout(this), cursorTimer(this),selectionTimer(this),
     win{0,0,0 ,0,100,14, 8.42, 2, 8, QPoint(0,0)}
 {  
@@ -48,7 +44,7 @@ QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::
     win.viewPortHeight = win.height/win.lineheight;
     setupScrollbar();
 
-    connect(st, &SimpleTerminal::s_error, this, [](QString error){ qDebug() << "Error from st: " << error;});
+    connect(st, &SimpleTerminal::s_error, this, [this](QString error){ emit  s_error("Error from st: " + error);});
     connect(st, &SimpleTerminal::s_updateView, this, &QLightTerminal::updateTerminal);
 
     // set up blinking cursor

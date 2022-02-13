@@ -2294,49 +2294,49 @@ void SimpleTerminal::selextend(int col, int row, int type, int done)
 void SimpleTerminal::xsetsel(char *strvtiden)
 {
     // TODO
-    qDebug() << "xsetsel";
+    // qDebug() << "xsetsel";
 }
 
 void SimpleTerminal::xclipcopy(void)
 {
     // TODO
-    qDebug() << "xclipcopy";
+    // qDebug() << "xclipcopy";
 }
 
 void SimpleTerminal::draw(void)
 {
     // TODO
-    qDebug() << "Draw";
+    // qDebug() << "Draw";
 }
 
 
 int SimpleTerminal::xsetcolorname(int x, const char *name)
 {
     // TODO
-    qDebug() << "xsetcolorname";
+    // qDebug() << "xsetcolorname";
     return 0;
 }
 
 int SimpleTerminal::xgetcolor(int x, unsigned char *r, unsigned char *g, unsigned char *b)
 {
     // TODO
-    qDebug() << "xgetcolor";
+    // qDebug() << "xgetcolor";
     return 0;
 }
 
 void SimpleTerminal::xloadcols()
 {
     // TODO
-    qDebug() << "xloadcols";
+    // qDebug() << "xloadcols";
 }
 
 int SimpleTerminal::xsetcursor(int cursor)
 {
     // TODO
-    qDebug() << "xsetcursor";
+    // qDebug() << "xsetcursor";
 }
 
 void SimpleTerminal::tprinter(char*s, size_t len){
     // TODO
-    qDebug() << "tprinter";
+    // qDebug() << "tprinter";
 }
