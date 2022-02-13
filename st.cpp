@@ -183,7 +183,7 @@ size_t SimpleTerminal::ttyread()
             ::memmove(readBuf, readBuf + written, readBufPos);
         }
 
-        emit updateView(&term);
+        emit s_updateView(&term);
         return ret;
     }
 }

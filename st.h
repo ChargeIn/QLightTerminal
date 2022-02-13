@@ -66,7 +66,7 @@ signals:
 
     void s_closed();
 
-    void updateView(Term* state);
+    void s_updateView(Term* state);
 
 private:
     TermWindow win;

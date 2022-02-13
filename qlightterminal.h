@@ -39,6 +39,8 @@ typedef struct {
 
 class QLightTerminal : public QWidget
 {
+    Q_OBJECT
+
 public:
     QLightTerminal(QWidget *parent = nullptr);
 
@@ -51,21 +53,11 @@ public slots:
      */
     void scrollX(int x);
 
-private:
-    SimpleTerminal *st;
-    QScrollBar scrollbar;
-    QHBoxLayout boxLayout;
-    QTimer cursorTimer;
-    QTimer selectionTimer;
-    Window win;
+    void close();
 
-    double cursorVisible = true;
+signals:
+    void s_closed(); // emitted when the terminal is closed
 
-    void setupScrollbar();
-
-    void paintEvent(QPaintEvent *event) override;
-
-    void updateSelection();
 protected:
     void keyPressEvent(QKeyEvent *event) override;
 
@@ -84,6 +76,22 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
 
 private:
+    SimpleTerminal *st;
+    QScrollBar scrollbar;
+    QHBoxLayout boxLayout;
+    QTimer cursorTimer;
+    QTimer selectionTimer;
+    Window win;
+
+    double cursorVisible = true;
+
+    void setupScrollbar();
+
+    void paintEvent(QPaintEvent *event) override;
+
+    void updateSelection();
+
+    bool closed = false;
     qint64 lastClick = 0;
     bool mouseDown = false;
     bool selectionStarted = false;

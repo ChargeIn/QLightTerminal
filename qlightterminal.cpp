@@ -27,7 +27,9 @@ QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::
 
     // setup default style
     // Note: font size is not reliable use win.charWidth for length computation
-    setStyleSheet("background: #181818; font-size: 14px; font-weight: 500;");
+    setAttribute(Qt::WA_StyledBackground, true);
+    setStyleSheet("background-color: #181818; font-size: 14px; font-weight: 500;");
+
     QFont mono = QFont("Monospace");
     mono.setFixedPitch(true);
     mono.setStyleHint(QFont::Monospace);
@@ -47,7 +49,7 @@ QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::
     setupScrollbar();
 
     connect(st, &SimpleTerminal::s_error, this, [](QString error){ qDebug() << "Error from st: " << error;});
-    connect(st, &SimpleTerminal::updateView, this, &QLightTerminal::updateTerminal);
+    connect(st, &SimpleTerminal::s_updateView, this, &QLightTerminal::updateTerminal);
 
     // set up blinking cursor
     connect(&cursorTimer, &QTimer::timeout, this, [this](){
@@ -58,6 +60,22 @@ QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::
 
     // allows for auto scrolling on selection reaching the borders
     connect(&selectionTimer, &QTimer::timeout, this, &QLightTerminal::updateSelection);
+
+    // connect close event of the tty
+    connect(st, &SimpleTerminal::s_closed, this, &QLightTerminal::close);
+}
+
+void QLightTerminal::close(){
+    setDisabled(true);
+    closed = true;
+
+    scrollbar.setVisible(false);
+
+    cursorTimer.stop();
+    selectionTimer.stop();
+    update();
+
+    emit s_closed();
 }
 
 void QLightTerminal::updateTerminal(Term* term){
@@ -92,6 +110,11 @@ void QLightTerminal::scrollX(int n)
 void QLightTerminal::paintEvent(QPaintEvent *event){
     QPainter painter(this);
     painter.setBackgroundMode(Qt::BGMode::OpaqueMode);
+
+    if(closed){
+        painter.drawText(QPointF(win.hPadding, win.lineheight + win.vPadding), "Terminal is closed.");
+        return;
+    }
 
     QString line;
     uint32_t fgColor = 0;
@@ -236,13 +259,23 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 /*
  * Override keyEvents and send the input to the shell
  */
-void QLightTerminal::keyPressEvent(QKeyEvent *e){
+void QLightTerminal::keyPressEvent(QKeyEvent *e){    
     QString input = e->text();
     Qt::KeyboardModifiers mods = e->modifiers();
+    int key = e->key();
+
+    if(key == Qt::Key_Backspace){
+        if(mods.testFlag(Qt::KeyboardModifier::AltModifier)){
+            st->ttywrite("\033\177", 2, 1);
+        } else {
+            st->ttywrite("\177",1,1);
+        }
+        return;
+    }
 
     // paste event
     if(
-        e->key() == 86
+        key == 86
         && mods & Qt::KeyboardModifier::ShiftModifier
         && mods & Qt::KeyboardModifier::ControlModifier)
     {
@@ -255,7 +288,7 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
 
     // copy event
     if(
-        e->key() == 67
+        key == 67
         && mods & Qt::KeyboardModifier::ShiftModifier
         && mods & Qt::KeyboardModifier::ControlModifier)
     {
@@ -278,7 +311,6 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
     } else {
         // special keys
         // TODO: Add more short cuts
-        int key = e->key();
         int end = 24;
 
         if(key > keys[end].key || key < keys[0].key){
@@ -301,7 +333,6 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
 }
 
 void QLightTerminal::mousePressEvent(QMouseEvent *event){
-    qDebug() << "Press";
     setFocus();
     mouseDown = true;
     lastMousePos = event->pos();
@@ -327,7 +358,6 @@ void QLightTerminal::mousePressEvent(QMouseEvent *event){
 }
 
 void QLightTerminal::mouseReleaseEvent(QMouseEvent *event){
-    qDebug() << "Release";
     mouseDown = false;
 
     // close selection if started
@@ -385,7 +415,7 @@ void QLightTerminal::updateSelection(){
     }
 }
 
-void QLightTerminal::mouseDoubleClickEvent(QMouseEvent *event){
+void QLightTerminal::mouseDoubleClickEvent(QMouseEvent *event){    
     QPointF pos = event->position();
     int col = (pos.x() - win.hPadding)/win.charWith;
     int row = (pos.y() - win.vPadding)/win.lineheight;
@@ -400,6 +430,10 @@ void QLightTerminal::mouseDoubleClickEvent(QMouseEvent *event){
 
 void QLightTerminal::resizeEvent(QResizeEvent *event)
 {
+    if(closed){
+        return;
+    }
+
     win.height = event->size().height();
     win.width = event->size().width();
     win.viewPortHeight = (win.height-win.vPadding*2)/win.lineheight;
@@ -440,7 +474,6 @@ void QLightTerminal::wheelEvent(QWheelEvent *event)
 
 void QLightTerminal::focusOutEvent(QFocusEvent *event)
 {
-    qDebug() << "Lost Focus";
     cursorTimer.stop();
     cursorVisible = false;
     update(win.cursorPos.x()-1, win.cursorPos.y() - fontMetrics().lineSpacing(), 8, win.lineheight); // hide cursor
