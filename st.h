@@ -14,6 +14,7 @@ class SimpleTerminal: public QObject
     Q_OBJECT
 public:
     Term term;
+    Selection sel;
 
     SimpleTerminal(QObject *parent = nullptr);
 
@@ -55,6 +56,8 @@ public:
 
     void selclear(void);
 
+    void selscroll(int orig, int n);
+
 public slots:
     size_t ttyread();
 
@@ -77,7 +80,6 @@ private:
     int readBufSize = 0;
 
     QSocketNotifier* readNotifier;
-    Selection sel;
     CSIEscape csiescseq;
     STREscape strescseq;
 
@@ -116,7 +118,6 @@ private:
     void tstrsequence(uchar c);
     void strreset(void);
     void tclearregion(int x1, int y1, int x2, int y2);
-    void selscroll(int orig, int n);
     void selnormalize(void);
     void strhandle(void);
     void strparse(void);

@@ -11,7 +11,7 @@
 #include <QHBoxLayout>
 #include <QKeyCombination>
 #include <QTimer>
-#include <QPoint>
+#include <QPointF>
 #include <QTime>
 
 #include "st.h"
@@ -28,12 +28,13 @@ typedef struct {
    int width;
    int height;
    int viewPortHeight; // number of lines visible
+   int viewPortWidth; // number of characters per line
    int scrollMultiplier; // allows for smooth scrolling
    double lineheight;
    double charWith;
    int vPadding;
    int hPadding;
-   QPoint cursorPos;
+   QPointF cursorPos;
 } Window;
 
 class QLightTerminal : public QWidget
@@ -46,7 +47,7 @@ public slots:
 
     /*
      * Scrolls the terminal vertically to the given offset
-     * Max scroll height is 10x max line count
+     * Max scroll height is the max line count multiplied by win.scrollMultiplier
      */
     void scrollX(int x);
 
@@ -55,6 +56,7 @@ private:
     QScrollBar scrollbar;
     QHBoxLayout boxLayout;
     QTimer cursorTimer;
+    QTimer selectionTimer;
     Window win;
 
     double cursorVisible = true;
@@ -63,6 +65,7 @@ private:
 
     void paintEvent(QPaintEvent *event) override;
 
+    void updateSelection();
 protected:
     void keyPressEvent(QKeyEvent *event) override;
 
@@ -76,11 +79,19 @@ protected:
 
     void mouseDoubleClickEvent( QMouseEvent * event ) override;
 
+    void mouseReleaseEvent(QMouseEvent *event) override;
+
+    void mouseMoveEvent(QMouseEvent *event) override;
+
 private:
     qint64 lastClick = 0;
+    bool mouseDown = false;
+    bool selectionStarted = false;
+    QPointF lastMousePos; // last tracked mouse pos if mouse down
 
     /*
      * Special Keyboard Character
+     * TODO: Add more
      */
     constexpr static const SpecialKey keys[25] = {
         { Qt::Key_Left, Qt::KeyboardModifier::NoModifier, "\033[D", 3, 4},

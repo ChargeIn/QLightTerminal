@@ -19,15 +19,19 @@
     #include <QDebug>
 #endif
 
-QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::Orientation::Vertical), boxLayout(this), cursorTimer(this),
-    win{0,0,0,100,14, 8.5, 2, 8, QPoint(0,0)}
+QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::Orientation::Vertical), boxLayout(this), cursorTimer(this),selectionTimer(this),
+    win{0,0,0 ,0,100,14, 8.42, 2, 8, QPoint(0,0)}
 {  
     // set up terminal
     st = new SimpleTerminal();
 
     // setup default style
+    // Note: font size is not reliable use win.charWidth for length computation
     setStyleSheet("background: #181818; font-size: 14px; font-weight: 500;");
-    setFont(QFont("Mono")); // terminal is based on monospace fonts
+    QFont mono = QFont("Monospace");
+    mono.setFixedPitch(true);
+    mono.setStyleHint(QFont::Monospace);
+    setFont(mono); // terminal is based on monospace fonts
     int linespacing = fontMetrics().lineSpacing();
     win.lineheight = linespacing*1.25;
 
@@ -51,6 +55,9 @@ QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::
         update(win.cursorPos.x() - 0.1, win.cursorPos.y() - 14, 10, win.lineheight);
     });
     cursorTimer.start(750);
+
+    // allows for auto scrolling on selection reaching the borders
+    connect(&selectionTimer, &QTimer::timeout, this, &QLightTerminal::updateSelection);
 }
 
 void QLightTerminal::updateTerminal(Term* term){
@@ -92,7 +99,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     uint32_t cfgColor = 0; // control for change
     uint32_t cbgColor = 0; // control for change
     ushort mode = -1;
-    int offset;
+    double offset;
     bool changed = false;
 
     // caluate the view port
@@ -162,8 +169,8 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
             // draw line state now and change color
             if(changed){
-                painter.drawText(QPoint(offset, yPos), line);
-                offset += QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
+                painter.drawText(QPointF(offset, yPos), line);
+                offset += line.size()*win.charWith;
 
                 if (IS_TRUECOL(fgColor)) {
                     painter.setPen(QColor(TRUERED(fgColor),TRUEGREEN(fgColor),TRUEBLUE(fgColor)));
@@ -183,7 +190,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
             line += QChar(g.u);
         }
-        painter.drawText(QPoint(offset,yPos), line);
+        painter.drawText(QPointF(offset,yPos), line);
         yPos -= win.lineheight;
     }
 
@@ -199,11 +206,11 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     for(int i = 0; i < st->term.c.x; i++) {
         line += QChar(st->term.line[st->term.c.y][i].u);
     }
-    int cursorOffset = QFontMetrics(painter.font()).size(Qt::TextSingleLine, line).width();
+    int cursorOffset = line.size()*win.charWith;
 
     double cursorPos = MIN(st->term.c.y+1, (int) win.viewPortHeight); // line of the cursor
 
-    win.cursorPos = QPoint(cursorOffset + win.hPadding, cursorPos*win.lineheight + win.vPadding);
+    win.cursorPos = QPointF(cursorOffset + win.hPadding, cursorPos*win.lineheight + win.vPadding);
 
     if(!cursorVisible){
         return;
@@ -294,7 +301,10 @@ void QLightTerminal::keyPressEvent(QKeyEvent *e){
 }
 
 void QLightTerminal::mousePressEvent(QMouseEvent *event){
+    qDebug() << "Press";
     setFocus();
+    mouseDown = true;
+    lastMousePos = event->pos();
 
     // reset old selection
     st->selclear();
@@ -314,6 +324,65 @@ void QLightTerminal::mousePressEvent(QMouseEvent *event){
     cursorVisible = true;
     update(win.cursorPos.x()-1, win.cursorPos.y() - fontMetrics().lineSpacing(), 8, win.lineheight); // draw cursor
     cursorTimer.start(750);
+}
+
+void QLightTerminal::mouseReleaseEvent(QMouseEvent *event){
+    qDebug() << "Release";
+    mouseDown = false;
+
+    // close selection if started
+    if(selectionStarted){
+        QPointF pos = event->position();
+        int col = (pos.x() - win.hPadding)/win.charWith;
+        int row = (pos.y() - win.vPadding)/win.lineheight;
+
+        col = MIN(col, win.viewPortWidth-1);
+        row = MIN(row, win.viewPortHeight-1);
+
+        st->selextend(col, row, SEL_REGULAR, 1);
+        selectionStarted = false;
+        selectionTimer.stop();
+        update();
+    }
+};
+
+void QLightTerminal::mouseMoveEvent(QMouseEvent *event) {
+    // selection handling
+   if(mouseDown){
+       lastMousePos = event->position();
+
+        if(!selectionStarted){
+            QPointF pos = event->position();
+            int col = (pos.x() - win.hPadding)/win.charWith;
+            double row = (pos.y() - win.vPadding)/win.lineheight;
+            st->selstart(col, row, 0);
+            selectionTimer.start(100);
+            selectionStarted = true;
+        }
+   }
+};
+
+void QLightTerminal::updateSelection(){
+    if(selectionStarted){
+        int col = (lastMousePos.x() - win.hPadding)/win.charWith;
+        double row = (lastMousePos.y() - win.vPadding)/win.lineheight;
+
+        if(row < 0.4){
+            // scroll up
+            double scroll = MIN(scrollbar.value()/win.lineheight, (row - 0.4)*-2);
+            scrollbar.setValue(scrollbar.value() - scroll*win.scrollMultiplier);
+        } if( row > win.viewPortHeight - 0.4){
+            // scroll down
+            double scroll = MIN((scrollbar.maximum() - scrollbar.value())/win.lineheight, (row - win.viewPortHeight + 0.4)*2);
+            scrollbar.setValue(scrollbar.value() + scroll*win.scrollMultiplier);
+        }
+
+        col = MIN(col, win.viewPortWidth-1);
+        row = MIN(row, win.viewPortHeight-1);
+
+        st->selextend(col, row, SEL_REGULAR, 0);
+        update();
+    }
 }
 
 void QLightTerminal::mouseDoubleClickEvent(QMouseEvent *event){
@@ -337,10 +406,12 @@ void QLightTerminal::resizeEvent(QResizeEvent *event)
 
     int col;
     // TODO: figure out why fontMetrics().maxWidth() is returning wrong size;
-    // for now replaced with 8.5 (win.charWidth)
+    // for now replaced with 8.42 (win.charWidth)
 
     col = (event->size().width() - 2 * win.hPadding) / win.charWith;
     col = MAX(1, col);
+
+    win.viewPortWidth = col;
 
     st->tresize(col, win.viewPortHeight);
     st->ttyresize(col*8.5, win.viewPortHeight*win.lineheight);
@@ -356,7 +427,6 @@ void QLightTerminal::wheelEvent(QWheelEvent *event)
     if (!numPixels.isNull()) {
         // TODO: test if this works << needs mouse with finer resolution
         scrollbar.setValue(scrollbar.value() - numPixels.y()*2);
-        scrollX(scrollbar.value());
         return;
     }
 
@@ -364,13 +434,13 @@ void QLightTerminal::wheelEvent(QWheelEvent *event)
 
     if (!numDegrees.isNull()) {
         scrollbar.setValue(scrollbar.value() - numDegrees.y()*2);
-        scrollX(scrollbar.value());
         return;
     }
 }
 
 void QLightTerminal::focusOutEvent(QFocusEvent *event)
 {
+    qDebug() << "Lost Focus";
     cursorTimer.stop();
     cursorVisible = false;
     update(win.cursorPos.x()-1, win.cursorPos.y() - fontMetrics().lineSpacing(), 8, win.lineheight); // hide cursor
