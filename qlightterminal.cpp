@@ -17,7 +17,7 @@
 
 QLightTerminal::QLightTerminal(QWidget *parent): QWidget(parent), scrollbar(Qt::Orientation::Vertical), boxLayout(this), cursorTimer(this),selectionTimer(this),
     win{0,0,0 ,0,100,14, 8.42, 2, 8, QPoint(0,0)}
-{  
+{
     // set up terminal
     st = new SimpleTerminal();
 
@@ -128,7 +128,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 
     int i = MIN(drawEnd, win.viewPortHeight);
     int stop = MAX(i - drawHeight, 0);
-    int yPos = i*win.lineheight + win.vPadding;                // y position of the the lastViewPortLine
+    double yPos = i*win.lineheight + win.vPadding;                // y position of the the lastViewPortLine
 
     int temp;
 
@@ -227,7 +227,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
     }
     int cursorOffset = line.size()*win.charWith;
 
-    double cursorPos = MIN(st->term.c.y+1, (int) win.viewPortHeight); // line of the cursor
+    double cursorPos = MIN(st->term.c.y + 1, win.viewPortHeight); // line of the cursor
 
     win.cursorPos = QPointF(cursorOffset + win.hPadding, cursorPos*win.lineheight + win.vPadding);
 
@@ -255,7 +255,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
 /*
  * Override keyEvents and send the input to the shell
  */
-void QLightTerminal::keyPressEvent(QKeyEvent *e){    
+void QLightTerminal::keyPressEvent(QKeyEvent *e){
     QString input = e->text();
     Qt::KeyboardModifiers mods = e->modifiers();
     int key = e->key();
@@ -411,7 +411,7 @@ void QLightTerminal::updateSelection(){
     }
 }
 
-void QLightTerminal::mouseDoubleClickEvent(QMouseEvent *event){    
+void QLightTerminal::mouseDoubleClickEvent(QMouseEvent *event){
     QPointF pos = event->position();
     int col = (pos.x() - win.hPadding)/win.charWith;
     int row = (pos.y() - win.vPadding)/win.lineheight;
@@ -432,7 +432,8 @@ void QLightTerminal::resizeEvent(QResizeEvent *event)
 
     win.height = event->size().height();
     win.width = event->size().width();
-    win.viewPortHeight = (win.height-win.vPadding*2)/win.lineheight;
+    // allow more padding at the bottom
+    win.viewPortHeight = (win.height-win.vPadding*2 - win.lineheight/2)/win.lineheight;
 
     int col;
     // TODO: figure out why fontMetrics().maxWidth() is returning wrong size;
