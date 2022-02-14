@@ -1245,6 +1245,10 @@ void SimpleTerminal::csihandle(void)
         case 2: /* all */
             tclearregion(0, 0, term.col-1, term.row-1);
             break;
+        case 3: /* delete scroll back */
+            term.scr = 0;
+            term.histi = 0;
+            break;
         default:
             goto unknown;
         }
@@ -1714,6 +1718,20 @@ void SimpleTerminal::tswapscreen(void)
 
     term.line = term.alt;
     term.alt = tmp;
+
+    int temp = term.scr;
+    term.altScr = term.scr;
+    term.scr = temp;
+
+    temp = term.histi;
+    term.histi = term.altHisti;
+    term.altHisti = temp;
+
+    if(term.mode & MODE_ALTSCREEN){
+        // alt screen should not have scroll
+        term.altScr = 0;
+        term.altHisti = 0;
+    }
 
     term.mode ^= MODE_ALTSCREEN;
     tfulldirt();

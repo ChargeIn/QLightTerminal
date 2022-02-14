@@ -162,6 +162,8 @@ typedef struct {
     Line hist[HISTSIZE]; /* history buffer */
     int histi;    /* history index */
     int scr;      /* scroll back */
+    int altHisti; /* alt screen history index */
+    int altScr;   /* alt screen scrollback */
     int *dirty;   /* dirtyness of lines */
     TCursor c;    /* cursor */
     int ocx;      /* old cursor col */
