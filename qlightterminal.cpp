@@ -198,7 +198,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event){
                 }
 
                 if (IS_TRUECOL(bgColor)) {
-                    painter.setBackground(QColor(TRUERED(bgColor),TRUEGREEN(bgColor),TRUEBLUE(bgColor)));
+                    painter.setBackground(QBrush(QColor(TRUERED(bgColor),TRUEGREEN(bgColor),TRUEBLUE(bgColor))));
                 } else {
                     painter.setBackground(QBrush(colors[bgColor]));
                 }
