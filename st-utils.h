@@ -5,38 +5,38 @@
 #include <QObject>
 
 /* macros */
-#define MIN(a, b)		((a) < (b) ? (a) : (b))
-#define MAX(a, b)		((a) < (b) ? (b) : (a))
-#define LEN(a)			(sizeof(a) / sizeof(a)[0])
-#define BETWEEN(x, a, b)	((a) <= (x) && (x) <= (b))
-#define DIVCEIL(n, d)		(((n) + ((d) - 1)) / (d))
-#define DEFAULT(a, b)		(a) = (a) ? (a) : (b)
-#define LIMIT(x, a, b)		(x) = (x) < (a) ? (a) : (x) > (b) ? (b) : (x)
-#define ATTRCMP(a, b)		((a).mode != (b).mode || (a).fg != (b).fg || \
+#define MIN(a, b)        ((a) < (b) ? (a) : (b))
+#define MAX(a, b)        ((a) < (b) ? (b) : (a))
+#define LEN(a)            (sizeof(a) / sizeof(a)[0])
+#define BETWEEN(x, a, b)    ((a) <= (x) && (x) <= (b))
+#define DIVCEIL(n, d)        (((n) + ((d) - 1)) / (d))
+#define DEFAULT(a, b)        (a) = (a) ? (a) : (b)
+#define LIMIT(x, a, b)        (x) = (x) < (a) ? (a) : (x) > (b) ? (b) : (x)
+#define ATTRCMP(a, b)        ((a).mode != (b).mode || (a).fg != (b).fg || \
                 (a).bg != (b).bg)
-#define TIMEDIFF(t1, t2)	((t1.tv_sec-t2.tv_sec)*1000 + \
+#define TIMEDIFF(t1, t2)    ((t1.tv_sec-t2.tv_sec)*1000 + \
                 (t1.tv_nsec-t2.tv_nsec)/1E6)
-#define MODBIT(x, set, bit)	((set) ? ((x) |= (bit)) : ((x) &= ~(bit)))
+#define MODBIT(x, set, bit)    ((set) ? ((x) |= (bit)) : ((x) &= ~(bit)))
 
-#define TRUECOLOR(r,g,b)	(1 << 24 | (r) << 16 | (g) << 8 | (b))
-#define IS_TRUECOL(x)		(1 << 24 & (x))
-#define TRUERED(x)		(((x) & 0xff0000) >> 8)
-#define TRUEGREEN(x)		(((x) & 0xff00))
-#define TRUEBLUE(x)		(((x) & 0xff) << 8)
+#define TRUECOLOR(r, g, b)    (1 << 24 | (r) << 16 | (g) << 8 | (b))
+#define IS_TRUECOL(x)        (1 << 24 & (x))
+#define TRUERED(x)        (((x) & 0xff0000) >> 8)
+#define TRUEGREEN(x)        (((x) & 0xff00))
+#define TRUEBLUE(x)        (((x) & 0xff) << 8)
 
 enum glyph_attribute {
-    ATTR_NULL       = 0,
-    ATTR_BOLD       = 1 << 0,
-    ATTR_FAINT      = 1 << 1,
-    ATTR_ITALIC     = 1 << 2,
-    ATTR_UNDERLINE  = 1 << 3,
-    ATTR_BLINK      = 1 << 4,
-    ATTR_REVERSE    = 1 << 5,
-    ATTR_INVISIBLE  = 1 << 6,
-    ATTR_STRUCK     = 1 << 7,
-    ATTR_WRAP       = 1 << 8,
-    ATTR_WIDE       = 1 << 9,
-    ATTR_WDUMMY     = 1 << 10,
+    ATTR_NULL = 0,
+    ATTR_BOLD = 1 << 0,
+    ATTR_FAINT = 1 << 1,
+    ATTR_ITALIC = 1 << 2,
+    ATTR_UNDERLINE = 1 << 3,
+    ATTR_BLINK = 1 << 4,
+    ATTR_REVERSE = 1 << 5,
+    ATTR_INVISIBLE = 1 << 6,
+    ATTR_STRUCK = 1 << 7,
+    ATTR_WRAP = 1 << 8,
+    ATTR_WIDE = 1 << 9,
+    ATTR_WDUMMY = 1 << 10,
     ATTR_BOLD_FAINT = ATTR_BOLD | ATTR_FAINT,
 };
 
@@ -66,12 +66,12 @@ enum selection_snap {
 #define HISTSIZE 1000
 
 /* macros */
-#define IS_SET(mode, flag)		((mode & (flag)) != 0)
-#define ISCONTROLC0(c)		(BETWEEN(c, 0, 0x1f) || (c) == 0x7f)
-#define ISCONTROLC1(c)		(BETWEEN(c, 0x80, 0x9f))
-#define ISCONTROL(c)		(ISCONTROLC0(c) || ISCONTROLC1(c))
-#define ISDELIM(u)		(u && wcschr(L" ", u))
-#define TLINE(term, y)		((y) < term.scr ? term.hist[((y) + term.histi - \
+#define IS_SET(mode, flag)        ((mode & (flag)) != 0)
+#define ISCONTROLC0(c)        (BETWEEN(c, 0, 0x1f) || (c) == 0x7f)
+#define ISCONTROLC1(c)        (BETWEEN(c, 0x80, 0x9f))
+#define ISCONTROL(c)        (ISCONTROLC0(c) || ISCONTROLC1(c))
+#define ISDELIM(u)        (u && wcschr(L" ", u))
+#define TLINE(term, y)        ((y) < term.scr ? term.hist[((y) + term.histi - \
                 term.scr + HISTSIZE + 1) % HISTSIZE] : \
                 term.line[(y) - term.scr])
 
@@ -95,13 +95,13 @@ typedef struct {
 } TCursor;
 
 enum term_mode {
-    MODE_WRAP        = 1 << 0,
-    MODE_INSERT      = 1 << 1,
-    MODE_ALTSCREEN   = 1 << 2,
-    MODE_CRLF        = 1 << 3,
-    MODE_ECHO        = 1 << 4,
-    MODE_PRINT       = 1 << 5,
-    MODE_UTF8        = 1 << 6,
+    MODE_WRAP = 1 << 0,
+    MODE_INSERT = 1 << 1,
+    MODE_ALTSCREEN = 1 << 2,
+    MODE_CRLF = 1 << 3,
+    MODE_ECHO = 1 << 4,
+    MODE_PRINT = 1 << 5,
+    MODE_UTF8 = 1 << 6,
 };
 
 enum cursor_movement {
@@ -110,9 +110,9 @@ enum cursor_movement {
 };
 
 enum cursor_state {
-    CURSOR_DEFAULT  = 0,
+    CURSOR_DEFAULT = 0,
     CURSOR_WRAPNEXT = 1,
-    CURSOR_ORIGIN   = 2
+    CURSOR_ORIGIN = 2
 };
 
 enum charset {
@@ -126,13 +126,13 @@ enum charset {
 };
 
 enum escape_state {
-    ESC_START      = 1,
-    ESC_CSI        = 2,
-    ESC_STR        = 4,  /* DCS, OSC, PM, APC */
+    ESC_START = 1,
+    ESC_CSI = 2,
+    ESC_STR = 4,  /* DCS, OSC, PM, APC */
     ESC_ALTCHARSET = 8,
-    ESC_STR_END    = 16, /* a final string was encountered */
-    ESC_TEST       = 32, /* Enter in test mode */
-    ESC_UTF8       = 64,
+    ESC_STR_END = 16, /* a final string was encountered */
+    ESC_TEST = 32, /* Enter in test mode */
+    ESC_UTF8 = 64,
 };
 
 typedef struct {
@@ -202,41 +202,41 @@ typedef struct {
 } STREscape;
 
 static const char base64_digits[] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 62, 0, 0, 0,
-    63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 0, 0, 0, -1, 0, 0, 0, 0, 1,
-    2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-    22, 23, 24, 25, 0, 0, 0, 0, 0, 0, 26, 27, 28, 29, 30, 31, 32, 33, 34,
-    35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 62, 0, 0, 0,
+        63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 0, 0, 0, -1, 0, 0, 0, 0, 1,
+        2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+        22, 23, 24, 25, 0, 0, 0, 0, 0, 0, 26, 27, 28, 29, 30, 31, 32, 33, 34,
+        35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
 enum win_mode {
-    MODE_VISIBLE     = 1 << 0,
-    MODE_FOCUSED     = 1 << 1,
-    MODE_APPKEYPAD   = 1 << 2,
-    MODE_MOUSEBTN    = 1 << 3,
+    MODE_VISIBLE = 1 << 0,
+    MODE_FOCUSED = 1 << 1,
+    MODE_APPKEYPAD = 1 << 2,
+    MODE_MOUSEBTN = 1 << 3,
     MODE_MOUSEMOTION = 1 << 4,
-    MODE_REVERSE     = 1 << 5,
-    MODE_KBDLOCK     = 1 << 6,
-    MODE_HIDE        = 1 << 7,
-    MODE_APPCURSOR   = 1 << 8,
-    MODE_MOUSESGR    = 1 << 9,
-    MODE_8BIT        = 1 << 10,
-    MODE_BLINK       = 1 << 11,
-    MODE_FBLINK      = 1 << 12,
-    MODE_FOCUS       = 1 << 13,
-    MODE_MOUSEX10    = 1 << 14,
-    MODE_MOUSEMANY   = 1 << 15,
-    MODE_BRCKTPASTE  = 1 << 16,
-    MODE_NUMLOCK     = 1 << 17,
-    MODE_MOUSE       = MODE_MOUSEBTN|MODE_MOUSEMOTION|MODE_MOUSEX10\
-                      |MODE_MOUSEMANY,
+    MODE_REVERSE = 1 << 5,
+    MODE_KBDLOCK = 1 << 6,
+    MODE_HIDE = 1 << 7,
+    MODE_APPCURSOR = 1 << 8,
+    MODE_MOUSESGR = 1 << 9,
+    MODE_8BIT = 1 << 10,
+    MODE_BLINK = 1 << 11,
+    MODE_FBLINK = 1 << 12,
+    MODE_FOCUS = 1 << 13,
+    MODE_MOUSEX10 = 1 << 14,
+    MODE_MOUSEMANY = 1 << 15,
+    MODE_BRCKTPASTE = 1 << 16,
+    MODE_NUMLOCK = 1 << 17,
+    MODE_MOUSE = MODE_MOUSEBTN | MODE_MOUSEMOTION | MODE_MOUSEX10\
+ | MODE_MOUSEMANY,
 };
 
 /* Purely graphic info */

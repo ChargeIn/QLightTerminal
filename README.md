@@ -1,6 +1,5 @@
 # QLightTerminal
 
-
 [![Current Version](https://img.shields.io/badge/version-1.0.0-green.svg)](https://github.com/ChargeIn/QLightTerm)
 
 A simple lightweight terminal widget for Qt6.
@@ -9,13 +8,15 @@ A simple lightweight terminal widget for Qt6.
 
 ## Usage
 
-Download the latest QLightTerminal-Pri source and include all files in a sub folder of your project.
-The widget can be included into your project by adding following line to your .pro file.
+Download the latest QLightTerminal-Pri source and include all files in a sub folder of your project. The widget can be
+included into your project by adding following line to your .pro file.
 
 ```
 include(<path-to-subdir>/QLightTerminal/QLightTerminal.pri);
 ```
+
 Afterwards it can be used as followed:
+
 ```
 File: main.cpp
 
@@ -32,14 +33,17 @@ MainWindow::MainWindow(QWidget *parent)
 ```
 
 ## Testing
+
 &#9989; Linux Ubuntu (Ubuntu, ZorinOS)\
 &#9989; Arch (Manjaro)\
 ❓ Windows
 
 ---
-## License
->You can check out the full license [here](https://github.com/ChargeIn/QLightTerm/blob/master/LICENSE)
 
-As stated by the Qt open source premise this project is license under *LGPL* v3.
-Since some parts of the project are based on the [Suckless Simple Terminal](https://st.suckless.org/) 
+## License
+
+> You can check out the full license [here](https://github.com/ChargeIn/QLightTerm/blob/master/LICENSE)
+
+As stated by the Qt open source premise this project is license under *LGPL* v3. Since some parts of the project are
+based on the [Suckless Simple Terminal](https://st.suckless.org/)
 the following files fall under the *Mit*-License: *st.cpp*, *st.h*,*st-utils.h*.
