@@ -10,9 +10,7 @@
 #include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
-{
+        : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
     terminal = new QLightTerminal();
@@ -20,8 +18,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->setCentralWidget(terminal);
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     delete ui;
 }
 
