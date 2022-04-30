@@ -13,6 +13,7 @@
 #include <QTimer>
 #include <QPointF>
 #include <QTime>
+#include <QColor>
 
 #include "st.h"
 
@@ -56,6 +57,8 @@ public
     void scrollX(int x);
 
     void setFontSize(int size, int weight = 500);
+
+    void setBackground(QColor color);
 
     void close();
 
@@ -145,18 +148,17 @@ private:
     /*
      * Terminal colors (same as xterm)
      */
-    constexpr static const QColor
-    colors[260] = {
-        // 8 normal Colors
-        QColor(0, 0, 0),          // Black
-                QColor(240, 82, 79),      // Red
-                QColor(98, 177, 32),      // Green
-                QColor(166, 138, 13),     // Yellow
-                QColor(57, 147, 212),     // Blue
-                QColor(167, 113, 191),    // Magenta
-                QColor(0, 163, 163),      // Cyan
-                QColor(128, 128, 128),    // Gray
-                // 8 bright colors
+    QColor colors[260] = {
+            // 8 normal Colors
+            QColor(0, 0, 0),          // Black
+            QColor(240, 82, 79),      // Red
+            QColor(98, 177, 32),      // Green
+            QColor(166, 138, 13),     // Yellow
+            QColor(57, 147, 212),     // Blue
+            QColor(167, 113, 191),    // Magenta
+            QColor(0, 163, 163),      // Cyan
+            QColor(128, 128, 128),    // Gray
+            // 8 bright colors
                 QColor(89, 89, 89),       // Dark Gray
                 QColor(255, 64, 80),      // Bright Red
                 QColor(79, 196, 20),      // Bright Green

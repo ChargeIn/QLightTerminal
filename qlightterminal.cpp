@@ -117,6 +117,11 @@ void QLightTerminal::setFontSize(int size, int weight) {
     this->win.charHeight = metric.lineSpacing();
 }
 
+void QLightTerminal::setBackground(QColor color) {
+    this->colors[this->defaultBackground] = color;
+    this->updateStyleSheet();
+}
+
 void QLightTerminal::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
     painter.setBackgroundMode(Qt::BGMode::OpaqueMode);
