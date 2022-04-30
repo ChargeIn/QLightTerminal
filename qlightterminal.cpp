@@ -14,24 +14,19 @@
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QPointF>
+#include <QFontMetricsF>
 
 QLightTerminal::QLightTerminal(QWidget *parent) : QWidget(parent), scrollbar(Qt::Orientation::Vertical),
                                                   boxLayout(this), cursorTimer(this), selectionTimer(this),
-                                                  win{0, 0, 0, 0, 100, 14, 8.42, 2, 8, QPoint(0, 0)} {
+                                                  win{0, 0, 0, 0, 100, 10, 10, 10, 8.42, 2, 8, QPoint(0, 0)} {
     // set up terminal
     st = new SimpleTerminal();
 
     // setup default style
     // Note: font size is not reliable use win.charWidth for length computation
     setAttribute(Qt::WA_StyledBackground, true);
-    setStyleSheet("background-color: #181818; font-size: 14px; font-weight: 500;");
-
-    QFont mono = QFont("Monospace");
-    mono.setFixedPitch(true);
-    mono.setStyleHint(QFont::Monospace);
-    setFont(mono); // terminal is based on monospace fonts
-    int linespacing = fontMetrics().lineSpacing();
-    win.lineheight = linespacing * 1.25;
+    this->setFontSize(10, 500);
+    this->updateStyleSheet();
 
     // set up scrollbar
     boxLayout.setSpacing(0);
@@ -50,7 +45,8 @@ QLightTerminal::QLightTerminal(QWidget *parent) : QWidget(parent), scrollbar(Qt:
     // set up blinking cursor
     connect(&cursorTimer, &QTimer::timeout, this, [this]() {
         cursorVisible = !cursorVisible;
-        update(win.cursorPos.x() - 0.1, win.cursorPos.y() - 14, 10, win.lineheight);
+        // update only takes int position and not floating point -> add padding
+        update(win.cursorPos.x() - 1, win.cursorPos.y() - win.charHeight - 1, win.charWith + 2, win.lineheight + 2);
     });
     cursorTimer.start(750);
 
@@ -105,6 +101,22 @@ void QLightTerminal::scrollX(int n) {
     update();
 }
 
+void QLightTerminal::setFontSize(int size, int weight) {
+    QFont mono = QFont("Monospace", size, weight);
+    mono.setFixedPitch(true);
+    mono.setStyleHint(QFont::Monospace);
+
+    setFont(mono); // font must be monospace
+
+    QFontMetricsF metric = QFontMetricsF(mono);
+
+    int linespacing = metric.lineSpacing();
+    this->win.lineheight = linespacing * 1.25;
+    this->win.fontSize = size;
+    this->win.charWith = metric.averageCharWidth();
+    this->win.charHeight = metric.lineSpacing();
+}
+
 void QLightTerminal::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
     painter.setBackgroundMode(Qt::BGMode::OpaqueMode);
@@ -117,13 +129,13 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
     QString line;
     uint32_t fgColor = 0;
     uint32_t bgColor = 0;
-    uint32_t cfgColor = 0; // control for change
-    uint32_t cbgColor = 0; // control for change
+    uint32_t cfgColor = 0; // control for change detection
+    uint32_t cbgColor = 0; // control for change detection
     ushort mode = -1;
     double offset;
     bool changed = false;
 
-    // caluate the view port
+    // calculate the view port
     int drawOffset = MAX(event->rect().y() - win.vPadding, 0) / win.lineheight;   // line index offset of the viewPort
     int drawHeight = (event->rect().height()) / win.lineheight;                   // height of the viewPort in lines
     int drawEnd = drawOffset + drawHeight;                                      // last line index of the viewPort
@@ -188,7 +200,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
                     fgColor = bgColor;
             }
 
-            // draw line state now and change color
+            // draw current line state and change color
             if (changed) {
                 painter.drawText(QPointF(offset, yPos), line);
                 offset += line.size() * win.charWith;
@@ -216,12 +228,13 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
     }
 
     if (st->term.scr != 0) {
-        return; // do not draw cursor is scrolled
+        return; // do not draw, cursor is scrolled out of view
     }
 
     // draw cursor
-    painter.setBackgroundMode(Qt::BGMode::TransparentMode);
-    painter.setPen(colors[st->term.c.attr.fg]);
+    // drawn by reversing foreground color and background color
+    painter.setPen(colors[st->term.c.attr.bg]);
+    painter.setBackground(QBrush(colors[st->term.c.attr.fg]));
     line = QString();
 
     for (int i = 0; i < st->term.c.x; i++) {
@@ -236,7 +249,9 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
     if (!cursorVisible) {
         return;
     }
-    painter.drawText(win.cursorPos, QChar(st->term.c.attr.u));
+
+    QChar charAtCursor = QChar(st->term.line[st->term.c.y][st->term.c.x].u);
+    painter.drawText(win.cursorPos, charAtCursor);
 
     /**
      *  TODO Add later
@@ -386,6 +401,14 @@ void QLightTerminal::mouseMoveEvent(QMouseEvent *event) {
             selectionStarted = true;
         }
     }
+}
+
+void QLightTerminal::updateStyleSheet() {
+    QString stylesheet;
+
+    stylesheet += "background-color:" + this->colors[this->defaultBackground].name() + ";";
+
+    setStyleSheet(stylesheet);
 };
 
 void QLightTerminal::updateSelection() {
@@ -447,8 +470,7 @@ void QLightTerminal::resize() {
     // allow more padding at the bottom
     int rows = (win.height - win.vPadding * 2 - win.lineheight / 2) / win.lineheight;
 
-    // TODO: figure out why fontMetrics().maxWidth() is returning wrong size;
-    // for now replaced with 8.42 (win.charWidth)
+
     int cols = (win.width - 2 * win.hPadding) / win.charWith;
     cols = MAX(1, cols);
 
@@ -484,7 +506,9 @@ void QLightTerminal::wheelEvent(QWheelEvent *event) {
 void QLightTerminal::focusOutEvent(QFocusEvent *event) {
     cursorTimer.stop();
     cursorVisible = false;
-    update(win.cursorPos.x() - 1, win.cursorPos.y() - fontMetrics().lineSpacing(), 8, win.lineheight); // hide cursor
+    // redraw cursor position
+    // update only takes int position and not floating point -> add padding
+    update(win.cursorPos.x() - 1, win.cursorPos.y() - win.charHeight - 1, win.charWith + 2, win.lineheight + 2);
 }
 
 void QLightTerminal::setupScrollbar() {

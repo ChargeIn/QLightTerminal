@@ -28,6 +28,10 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     QLightTerminal* terminal = new QLightTerminal();
+    
+    // optional
+    terminal->setFontSize(12, 500);
+    
     setCentralWidget(terminal);
 }
 ```

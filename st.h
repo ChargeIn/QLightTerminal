@@ -91,7 +91,7 @@ private:
     unsigned int defaultrcs = 257;
     unsigned int defaultfg = 258;
     unsigned int defaultbg = 259;
-    unsigned int defaultCursor = 9608;
+    unsigned int defaultCursor = 160; // no longer used
 
     const int tabspaces = 8;
 

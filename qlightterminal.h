@@ -30,7 +30,9 @@ typedef struct {
     int viewPortHeight; // number of lines visible
     int viewPortWidth; // number of characters per line
     int scrollMultiplier; // allows for smooth scrolling
+    int fontSize;
     double lineheight;
+    double charHeight;
     double charWith;
     int vPadding;
     int hPadding;
@@ -52,6 +54,8 @@ public
      * Max scroll height is the max line count multiplied by win.scrollMultiplier
      */
     void scrollX(int x);
+
+    void setFontSize(int size, int weight = 500);
 
     void close();
 
@@ -76,6 +80,8 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
 
     void mouseMoveEvent(QMouseEvent *event) override;
+
+    void updateStyleSheet();
 
 private:
     SimpleTerminal *st;
@@ -106,6 +112,7 @@ private:
      * Special Keyboard Character
      * TODO: Add more
      */
+    const int defaultBackground = 259;
     constexpr static const SpecialKey
     keys[25] = {
         { Qt::Key_Left, Qt::KeyboardModifier::NoModifier, "\033[D", 3, 4 },
@@ -401,7 +408,7 @@ private:
                 // Default colors
                 QColor(255, 255, 255),
                 QColor(85, 85, 85),
-                QColor(187, 187, 187),        // Default font color
+                QColor(200, 200, 200),        // Default font color
                 QColor(24, 24, 24)            // Default background color
     };
 };
