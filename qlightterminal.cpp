@@ -278,6 +278,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
  * Override keyEvents and send the input to the shell
  */
 void QLightTerminal::keyPressEvent(QKeyEvent *e) {
+    e->accept();
     QString input = e->text();
     Qt::KeyboardModifiers mods = e->modifiers();
     int key = e->key();
@@ -406,6 +407,11 @@ void QLightTerminal::mouseMoveEvent(QMouseEvent *event) {
             selectionStarted = true;
         }
     }
+}
+
+bool QLightTerminal::focusNextPrevChild(bool next) {
+    // disabled to allow the terminal to consume tab key presses
+    return false;
 }
 
 void QLightTerminal::updateStyleSheet() {

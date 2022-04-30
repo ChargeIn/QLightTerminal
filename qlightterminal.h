@@ -84,7 +84,9 @@ protected:
 
     void mouseMoveEvent(QMouseEvent *event) override;
 
-    void updateStyleSheet();
+    bool focusNextPrevChild(bool next) override;
+
+    void paintEvent(QPaintEvent *event) override;
 
 private:
     SimpleTerminal *st;
@@ -99,7 +101,7 @@ private:
 
     void setupScrollbar();
 
-    void paintEvent(QPaintEvent *event) override;
+    void updateStyleSheet();
 
     void updateSelection();
 
