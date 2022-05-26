@@ -465,6 +465,14 @@ void QLightTerminal::mouseDoubleClickEvent(QMouseEvent *event) {
     int col = (pos.x() - win.hPadding) / win.charWith;
     int row = (pos.y() - win.vPadding) / win.lineheight;
 
+    if(row >= this->win.viewPortHeight || row < 0) {
+        return;
+    }
+
+    if(col >= this->win.viewPortWidth || col < 0) {
+        return;
+    }
+
     st->selclear();
     st->selstart(col, row, SNAP_WORD);
 
