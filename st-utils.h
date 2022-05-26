@@ -24,6 +24,10 @@
 #define TRUEGREEN(x)        (((x) & 0xff00))
 #define TRUEBLUE(x)        (((x) & 0xff) << 8)
 
+#define RED_FROM_TRUE(x)   (0xFF & (x >> 16))
+#define GREEN_FROM_TRUE(x)   (0xFF & (x >> 8))
+#define BLUE_FROM_TRUE(x)   (0xFF & x)
+
 enum glyph_attribute {
     ATTR_NULL = 0,
     ATTR_BOLD = 1 << 0,

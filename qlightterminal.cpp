@@ -213,13 +213,13 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
                 offset += line.size() * win.charWith;
 
                 if (IS_TRUECOL(fgColor)) {
-                    painter.setPen(QColor(TRUERED(fgColor), TRUEGREEN(fgColor), TRUEBLUE(fgColor)));
+                    painter.setPen(QColor(RED_FROM_TRUE(fgColor), GREEN_FROM_TRUE(fgColor), BLUE_FROM_TRUE(fgColor)));
                 } else {
                     painter.setPen(colors[fgColor]);
                 }
 
                 if (IS_TRUECOL(bgColor)) {
-                    painter.setBackground(QBrush(QColor(TRUERED(bgColor), TRUEGREEN(bgColor), TRUEBLUE(bgColor))));
+                    painter.setBackground(QBrush(QColor(RED_FROM_TRUE(bgColor), GREEN_FROM_TRUE(bgColor), BLUE_FROM_TRUE(bgColor))));
                 } else {
                     painter.setBackground(QBrush(colors[bgColor]));
                 }
@@ -240,8 +240,19 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
 
     // draw cursor
     // drawn by reversing foreground color and background color
-    painter.setPen(colors[st->term.c.attr.bg]);
-    painter.setBackground(QBrush(colors[st->term.c.attr.fg]));
+    fgColor = st->term.c.attr.bg;
+    if (IS_TRUECOL(fgColor)) {
+        painter.setPen(QColor(RED_FROM_TRUE(fgColor), GREEN_FROM_TRUE(fgColor), BLUE_FROM_TRUE(fgColor)));
+    } else {
+        painter.setPen(colors[fgColor]);
+    }
+    bgColor = st->term.c.attr.fg;
+    if (IS_TRUECOL(bgColor)) {
+        painter.setBackground(QBrush(QColor(RED_FROM_TRUE(bgColor), GREEN_FROM_TRUE(bgColor), BLUE_FROM_TRUE(bgColor))));
+    } else {
+        painter.setBackground(QBrush(colors[bgColor]));
+    }
+
     line = QString();
 
     for (int i = 0; i < st->term.c.x; i++) {
