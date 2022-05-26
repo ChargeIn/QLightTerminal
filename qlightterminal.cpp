@@ -113,7 +113,9 @@ void QLightTerminal::setFontSize(int size, int weight) {
     int linespacing = metric.lineSpacing();
     this->win.lineheight = linespacing * 1.25;
     this->win.fontSize = size;
-    this->win.charWith = metric.averageCharWidth();
+    auto initialRect = metric.boundingRect("a");
+    auto improvedRect = metric.boundingRect(initialRect, 0, "a");
+    this->win.charWith = improvedRect.width();
     this->win.charHeight = metric.lineSpacing();
 }
 
@@ -469,18 +471,20 @@ void QLightTerminal::resizeEvent(QResizeEvent *event) {
     win.width = event->size().width();
 
     if (resizeTimer.isActive()) {
+        resizeTimer.start(500);
         return;
     }
 
-    resizeTimer.start(300);
+    resizeTimer.start(500);
 
     event->accept();
 }
 
 void QLightTerminal::resize() {
+    resizeTimer.stop();
+
     // allow more padding at the bottom
     int rows = (win.height - win.vPadding * 2 - win.lineheight / 2) / win.lineheight;
-
 
     int cols = (win.width - 2 * win.hPadding) / win.charWith;
     cols = MAX(1, cols);

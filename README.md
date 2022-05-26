@@ -1,6 +1,6 @@
 # QLightTerminal
 
-[![Current Version](https://img.shields.io/badge/version-1.1.0-green.svg)](https://github.com/ChargeIn/QLightTerm)
+[![Current Version](https://img.shields.io/badge/version-1.1.1-green.svg)](https://github.com/ChargeIn/QLightTerm)
 
 A simple lightweight terminal widget for Qt6.
 
