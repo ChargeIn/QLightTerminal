@@ -18,7 +18,7 @@
 
 QLightTerminal::QLightTerminal(QWidget *parent) : QWidget(parent), scrollbar(Qt::Orientation::Vertical),
                                                   boxLayout(this), cursorTimer(this), selectionTimer(this),
-                                                  win{0, 0, 0, 0, 100, 10, 10, 10, 8.42, 2, 8, QPoint(0, 0)} {
+                                                  win{0, 0, 0, 0, 100, 10, 10, 1.25, 10, 8.42, 0, 8} {
     // set up terminal
     st = new SimpleTerminal();
 
@@ -45,8 +45,8 @@ QLightTerminal::QLightTerminal(QWidget *parent) : QWidget(parent), scrollbar(Qt:
     // set up blinking cursor
     connect(&cursorTimer, &QTimer::timeout, this, [this]() {
         cursorVisible = !cursorVisible;
-        // update only takes int position and not floating point -> add padding
-        update(win.cursorPos.x() - 1, win.cursorPos.y() - win.charHeight - 1, win.charWith + 2, win.lineheight + 2);
+        // cursor position is in float units while the update is in int -> need to rerender full screen to avoid cutoffs
+        update();
     });
     cursorTimer.start(750);
 
@@ -111,17 +111,31 @@ void QLightTerminal::setFontSize(int size, int weight) {
     QFontMetricsF metric = QFontMetricsF(mono);
 
     int linespacing = metric.lineSpacing();
-    this->win.lineheight = linespacing * 1.25;
+    this->win.lineheight = linespacing * this->win.lineHeightScale;
     this->win.fontSize = size;
     auto initialRect = metric.boundingRect("a");
     auto improvedRect = metric.boundingRect(initialRect, 0, "a");
     this->win.charWith = improvedRect.width();
-    this->win.charHeight = metric.lineSpacing();
+    this->win.charHeight = improvedRect.height();
+    this->update();
 }
 
 void QLightTerminal::setBackground(QColor color) {
     this->colors[this->defaultBackground] = color;
     this->updateStyleSheet();
+}
+
+void QLightTerminal::setLineHeightScale(double scale) {
+    QFontMetricsF metric = QFontMetricsF(this->font());
+    this->win.lineheight = metric.lineSpacing() * scale;
+    this->win.lineHeightScale = scale;
+    this->update();
+}
+
+void QLightTerminal::setPadding(double vertical, double horizontal) {
+    this->win.hPadding = horizontal;
+    this->win.vPadding = vertical;
+    this->update();
 }
 
 void QLightTerminal::paintEvent(QPaintEvent *event) {
@@ -260,16 +274,16 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
     }
     int cursorOffset = line.size() * win.charWith;
 
-    double cursorPos = MIN(st->term.c.y + 1, win.viewPortHeight); // line of the cursor
+    double cursorPosVert = MIN(st->term.c.y + 1, win.viewPortHeight); // line of the cursor
 
-    win.cursorPos = QPointF(cursorOffset + win.hPadding, cursorPos * win.lineheight + win.vPadding);
+    auto cursorPos = QPointF(cursorOffset + win.hPadding, cursorPosVert * win.lineheight + win.vPadding);
 
     if (!cursorVisible) {
         return;
     }
 
     QChar charAtCursor = QChar(st->term.line[st->term.c.y][st->term.c.x].u);
-    painter.drawText(win.cursorPos, charAtCursor);
+    painter.drawText(cursorPos, charAtCursor);
 
     /**
      *  TODO Add later
@@ -383,7 +397,7 @@ void QLightTerminal::mousePressEvent(QMouseEvent *event) {
 
     // draw cursor
     cursorVisible = true;
-    update(win.cursorPos.x() - 1, win.cursorPos.y() - fontMetrics().lineSpacing(), 8, win.lineheight); // draw cursor
+    update(); // draw cursor
     cursorTimer.start(750);
 }
 
@@ -433,6 +447,7 @@ void QLightTerminal::updateStyleSheet() {
     stylesheet += "background-color:" + this->colors[this->defaultBackground].name() + ";";
 
     setStyleSheet(stylesheet);
+    this->update();
 };
 
 void QLightTerminal::updateSelection() {
@@ -465,11 +480,11 @@ void QLightTerminal::mouseDoubleClickEvent(QMouseEvent *event) {
     int col = (pos.x() - win.hPadding) / win.charWith;
     int row = (pos.y() - win.vPadding) / win.lineheight;
 
-    if(row >= this->win.viewPortHeight || row < 0) {
+    if (row >= this->win.viewPortHeight || row < 0) {
         return;
     }
 
-    if(col >= this->win.viewPortWidth || col < 0) {
+    if (col >= this->win.viewPortWidth || col < 0) {
         return;
     }
 
@@ -502,10 +517,11 @@ void QLightTerminal::resizeEvent(QResizeEvent *event) {
 void QLightTerminal::resize() {
     resizeTimer.stop();
 
-    // allow more padding at the bottom
-    int rows = (win.height - win.vPadding * 2 - win.lineheight / 2) / win.lineheight;
+    int paddingBottom = 4;
+    int rows = (win.height - win.vPadding * 2 - paddingBottom) / win.lineheight;
 
-    int cols = (win.width - 2 * win.hPadding) / win.charWith;
+    int scrollbarPadding = 5;
+    int cols = (win.width - 2 * win.hPadding - scrollbarPadding) / win.charWith;
     cols = MAX(1, cols);
 
     if (cols == win.viewPortWidth && rows == win.viewPortHeight) {
@@ -541,8 +557,7 @@ void QLightTerminal::focusOutEvent(QFocusEvent *event) {
     cursorTimer.stop();
     cursorVisible = false;
     // redraw cursor position
-    // update only takes int position and not floating point -> add padding
-    update(win.cursorPos.x() - 1, win.cursorPos.y() - win.charHeight - 1, win.charWith + 2, win.lineheight + 2);
+    update();
 }
 
 void QLightTerminal::setupScrollbar() {
