@@ -147,6 +147,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
         return;
     }
 
+    QFont font;
     QString line;
     uint32_t fgColor = 0;
     uint32_t bgColor = 0;
@@ -219,6 +220,20 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
 
                 if (g.mode & ATTR_INVISIBLE)
                     fgColor = bgColor;
+
+                font = painter.font();
+
+                if((g.mode & ATTR_BOLD) && !font.bold()) {
+                    font.setBold(true);
+                } else if(!(g.mode & ATTR_BOLD) && font.bold()) {
+                    font.setBold(false);
+                }
+
+                if((g.mode & ATTR_ITALIC) && !font.italic()) {
+                    font.setItalic(true);
+                } else if(!(g.mode & ATTR_ITALIC) && font.italic()) {
+                    font.setItalic(false);
+                }
             }
 
             // draw current line state and change color
@@ -240,6 +255,7 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
 
                 line = QString();
                 changed = false;
+                painter.setFont(font);
             }
 
             line += QChar(g.u);
