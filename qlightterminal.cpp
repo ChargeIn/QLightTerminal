@@ -234,6 +234,12 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
                 } else if(!(g.mode & ATTR_ITALIC) && font.italic()) {
                     font.setItalic(false);
                 }
+
+                if((g.mode & ATTR_UNDERLINE) && !font.underline()) {
+                    font.setUnderline(true);
+                } else if(!(g.mode & ATTR_UNDERLINE) && font.underline()) {
+                    font.setUnderline(false);
+                }
             }
 
             // draw current line state and change color
