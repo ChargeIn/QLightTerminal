@@ -445,6 +445,11 @@ void QLightTerminal::mouseMoveEvent(QMouseEvent *event) {
             QPointF pos = event->position();
             int col = (pos.x() - win.hPadding) / win.charWith;
             double row = (pos.y() - win.vPadding) / win.lineheight;
+
+            if(row >= this->win.viewPortHeight) {
+                return;
+            }
+
             st->selstart(col, row, 0);
             selectionTimer.start(100);
             selectionStarted = true;
