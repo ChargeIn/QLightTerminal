@@ -223,29 +223,17 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
 
                 font = painter.font();
 
-                if((g.mode & ATTR_BOLD) && !font.bold()) {
-                    font.setBold(true);
-                } else if(!(g.mode & ATTR_BOLD) && font.bold()) {
-                    font.setBold(false);
-                }
+                bool bold = g.mode & ATTR_BOLD;
+                if (bold != font.bold()) font.setBold(bold);
 
-                if((g.mode & ATTR_ITALIC) && !font.italic()) {
-                    font.setItalic(true);
-                } else if(!(g.mode & ATTR_ITALIC) && font.italic()) {
-                    font.setItalic(false);
-                }
+                bool italic = g.mode & ATTR_ITALIC;
+                if (italic != font.italic()) font.setItalic(italic);
 
-                if((g.mode & ATTR_UNDERLINE) && !font.underline()) {
-                    font.setUnderline(true);
-                } else if(!(g.mode & ATTR_UNDERLINE) && font.underline()) {
-                    font.setUnderline(false);
-                }
+                bool underline = g.mode & ATTR_UNDERLINE;
+                if (underline != font.underline()) font.setUnderline(underline);
 
-                if((g.mode & ATTR_STRUCK) && !font.strikeOut()) {
-                    font.setStrikeOut(true);
-                } else if(!(g.mode & ATTR_STRUCK) && font.strikeOut()) {
-                    font.setStrikeOut(false);
-                }
+                bool strikethrough = g.mode & ATTR_STRUCK;
+                if (strikethrough != font.strikeOut()) font.setStrikeOut(strikethrough);
             }
 
             // draw current line state and change color
@@ -260,7 +248,8 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
                 }
 
                 if (IS_TRUECOL(bgColor)) {
-                    painter.setBackground(QBrush(QColor(RED_FROM_TRUE(bgColor), GREEN_FROM_TRUE(bgColor), BLUE_FROM_TRUE(bgColor))));
+                    painter.setBackground(
+                            QBrush(QColor(RED_FROM_TRUE(bgColor), GREEN_FROM_TRUE(bgColor), BLUE_FROM_TRUE(bgColor))));
                 } else {
                     painter.setBackground(QBrush(colors[bgColor]));
                 }
@@ -290,7 +279,8 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
     }
     bgColor = st->term.c.attr.fg;
     if (IS_TRUECOL(bgColor)) {
-        painter.setBackground(QBrush(QColor(RED_FROM_TRUE(bgColor), GREEN_FROM_TRUE(bgColor), BLUE_FROM_TRUE(bgColor))));
+        painter.setBackground(
+                QBrush(QColor(RED_FROM_TRUE(bgColor), GREEN_FROM_TRUE(bgColor), BLUE_FROM_TRUE(bgColor))));
     } else {
         painter.setBackground(QBrush(colors[bgColor]));
     }
@@ -458,7 +448,7 @@ void QLightTerminal::mouseMoveEvent(QMouseEvent *event) {
             int col = (pos.x() - win.hPadding) / win.charWith;
             double row = (pos.y() - win.vPadding) / win.lineheight;
 
-            if(row >= this->win.viewPortHeight) {
+            if (row >= this->win.viewPortHeight) {
                 return;
             }
 
