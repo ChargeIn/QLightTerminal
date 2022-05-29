@@ -240,6 +240,12 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
                 } else if(!(g.mode & ATTR_UNDERLINE) && font.underline()) {
                     font.setUnderline(false);
                 }
+
+                if((g.mode & ATTR_STRUCK) && !font.strikeOut()) {
+                    font.setStrikeOut(true);
+                } else if(!(g.mode & ATTR_STRUCK) && font.strikeOut()) {
+                    font.setStrikeOut(false);
+                }
             }
 
             // draw current line state and change color
