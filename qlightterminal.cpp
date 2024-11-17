@@ -259,7 +259,12 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
                 painter.setFont(font);
             }
 
-            line += QChar(g.u);
+            if (0xffff < g.u) {
+                line += QStringView(QChar::fromUcs4(g.u));
+            } else {
+                line += QChar(g.u);
+            }
+
         }
         painter.drawText(QPointF(offset, yPos), line);
         yPos -= win.lineheight;
@@ -288,7 +293,13 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
     line = QString();
 
     for (int i = 0; i < st->term.c.x; i++) {
-        line += QChar(st->term.line[st->term.c.y][i].u);
+        auto rune = st->term.line[st->term.c.y][i].u;
+
+        if (0xffff < rune) {
+            line += QStringView(QChar::fromUcs4(rune));
+        } else {
+            line += QChar(rune);
+        }
     }
     int cursorOffset = line.size() * win.charWith;
 
@@ -300,8 +311,14 @@ void QLightTerminal::paintEvent(QPaintEvent *event) {
         return;
     }
 
-    QChar charAtCursor = QChar(st->term.line[st->term.c.y][st->term.c.x].u);
-    painter.drawText(cursorPos, charAtCursor);
+    auto runeAtCursor = st->term.line[st->term.c.y][st->term.c.x].u;
+
+    if (0xffff < runeAtCursor) {
+        painter.drawText(cursorPos, QString(QChar::fromUcs4(runeAtCursor)));
+    } else {
+        painter.drawText(cursorPos, QChar(runeAtCursor));
+    }
+
 
     /**
      *  TODO Add later
