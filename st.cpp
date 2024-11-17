@@ -364,6 +364,9 @@ void SimpleTerminal::tputc(Rune u) {
      * they must not cause conflicts with sequences.
      */
     if (control) {
+      	/* in UTF-8 mode ignore handling C1 control characters */
+		if (IS_SET(term.mode, MODE_UTF8) && ISCONTROLC1(u))
+			return;
         tcontrolcode(u);
         /*
          * control codes are not shown ever
@@ -410,11 +413,16 @@ void SimpleTerminal::tputc(Rune u) {
         gp = &term.line[term.c.y][term.c.x];
     }
 
-    if (IS_SET(term.mode, MODE_INSERT) && term.c.x + width < term.col)
-        memmove(gp + width, gp, (term.col - term.c.x - width) * sizeof(Glyph));
+    if (IS_SET(term.mode, MODE_INSERT) && term.c.x + width < term.col) {
+		memmove(gp+width, gp, (term.col - term.c.x - width) * sizeof(Glyph));
+		gp->mode &= ~ATTR_WIDE;
+	}
 
     if (term.c.x + width > term.col) {
-        tnewline(1);
+        if (IS_SET(term.mode, MODE_WRAP))
+			tnewline(1);
+		else
+			tmoveto(term.col - width, term.c.y);
         gp = &term.line[term.c.y][term.c.x];
     }
 
@@ -838,7 +846,7 @@ void SimpleTerminal::selclear(void) {
 }
 
 void SimpleTerminal::selscroll(int orig, int n) {
-    if (sel.ob.x == -1)
+	if (sel.ob.x == -1 || sel.alt != IS_SET(term.mode, MODE_ALTSCREEN))
         return;
 
     sel.ob.y += n;
@@ -885,6 +893,11 @@ void SimpleTerminal::tsetdirt(int top, int bot) {
 void SimpleTerminal::strhandle(void) {
     char *p = NULL, *dec;
     int j, narg, par;
+    const struct { unsigned int idx; char *str; } osc_table[] = {
+		{ defaultfg, "foreground" },
+		{ defaultbg, "background" },
+		{ defaultcs, "cursor" }
+	};
 
     term.esc &= ~(ESC_STR_END | ESC_STR);
     strparse();
@@ -910,44 +923,23 @@ void SimpleTerminal::strhandle(void) {
                     }
                     return;
                 case 10:
-                    if (narg < 2)
-                        break;
-
-                    p = strescseq.args[1];
-
-                    if (!strcmp(p, "?"))
-                        osc_color_response(defaultfg, 10);
-                    else if (xsetcolorname(defaultfg, p))
-                        fprintf(stderr, "erresc: invalid foreground color: %s\n", p);
-                    else
-                        redraw();
-                    return;
                 case 11:
-                    if (narg < 2)
-                        break;
-
-                    p = strescseq.args[1];
-
-                    if (!strcmp(p, "?"))
-                        osc_color_response(defaultbg, 11);
-                    else if (xsetcolorname(defaultbg, p))
-                        fprintf(stderr, "erresc: invalid background color: %s\n", p);
-                    else
-                        redraw();
-                    return;
                 case 12:
                     if (narg < 2)
-                        break;
+						break;
+					p = strescseq.args[1];
+					if ((j = par - 10) < 0 || j >= LEN(osc_table))
+						break; /* shouldn't be possible */
 
-                    p = strescseq.args[1];
-
-                    if (!strcmp(p, "?"))
-                        osc_color_response(defaultcs, 12);
-                    else if (xsetcolorname(defaultcs, p))
-                        fprintf(stderr, "erresc: invalid cursor color: %s\n", p);
-                    else
-                        redraw();
-                    return;
+					if (!strcmp(p, "?")) {
+						osc_color_response(par, osc_table[j].idx, 0);
+					} else if (xsetcolorname(osc_table[j].idx, p)) {
+						fprintf(stderr, "erresc: invalid %s color: %s\n",
+                            osc_table[j].str, p);
+					} else {
+						tfulldirt();
+					}
+					return;
                 case 4: /* color set */
                     if (narg < 3)
                         break;
@@ -956,21 +948,23 @@ void SimpleTerminal::strhandle(void) {
                 case 104: /* color reset */
                     j = (narg > 1) ? atoi(strescseq.args[1]) : -1;
 
-                    if (p && !strcmp(p, "?"))
-                        osc4_color_response(j);
-                    else if (xsetcolorname(j, p)) {
-                        if (par == 104 && narg <= 1)
-                            return; /* color reset without parameter */
-                        fprintf(stderr, "erresc: invalid color j=%d, p=%s\n",
-                                j, p ? p : "(null)");
-                    } else {
-                        /*
-                         * TODO if defaultbg color is changed, borders
-                         * are dirty
-                         */
-                        redraw();
-                    }
-                    return;
+					if (p && !strcmp(p, "?")) {
+						osc_color_response(j, 0, 1);
+					} else if (xsetcolorname(j, p)) {
+						if (par == 104 && narg <= 1) {
+							xloadcols();
+							return; /* color reset without parameter */
+						}
+						fprintf(stderr, "erresc: invalid color j=%d, p=%s\n",
+				        		j, p ? p : "(null)");
+					} else {
+						/*
+				 		 * TODO if defaultbg color is changed, borders
+				 		 * are dirty
+				 		 */
+						tfulldirt();
+				}
+				return;
             }
             break;
         case 'k': /* old title set compatibility */
@@ -1071,6 +1065,7 @@ void SimpleTerminal::csireset(void) {
 void SimpleTerminal::csiparse(void) {
     char *p = csiescseq.buf, *np;
     long int v;
+    int sep = ';'; /* colon or semi-colon, but not both */
 
     csiescseq.narg = 0;
     if (*p == '?') {
@@ -1088,7 +1083,9 @@ void SimpleTerminal::csiparse(void) {
             v = -1;
         csiescseq.arg[csiescseq.narg++] = v;
         p = np;
-        if (*p != ';' || csiescseq.narg == ESC_ARG_SIZ)
+		if (sep == ';' && *p == ':')
+			sep = ':'; /* allow override to colon once */
+		if (*p != sep || csiescseq.narg == ESC_ARG_SIZ)
             break;
         p++;
     }
@@ -1144,7 +1141,7 @@ void SimpleTerminal::csihandle(void) {
                 ttywrite(vtiden, strlen(vtiden), 0);
             break;
         case 'b': /* REP -- if last char is printable print it <n> more times */
-            DEFAULT(csiescseq.arg[0], 1);
+			LIMIT(csiescseq.arg[0], 1, 65535);
             if (term.lastc)
                 while (csiescseq.arg[0]-- > 0)
                     tputc(term.lastc);
@@ -1233,6 +1230,7 @@ void SimpleTerminal::csihandle(void) {
             }
             break;
         case 'S': /* SU -- Scroll <n> line up */
+            if (csiescseq.priv) break;
             DEFAULT(csiescseq.arg[0], 1);
             tscrollup(term.top, csiescseq.arg[0], 0);
             break;
@@ -1274,13 +1272,20 @@ void SimpleTerminal::csihandle(void) {
         case 'm': /* SGR -- Terminal attribute (color) */
             tsetattr(csiescseq.arg, csiescseq.narg);
             break;
-        case 'n': /* DSR – Device Status Report (cursor position) */
-            if (csiescseq.arg[0] == 6) {
-                len = snprintf(buf, sizeof(buf), "\033[%i;%iR",
-                               term.c.y + 1, term.c.x + 1);
-                ttywrite(buf, len, 0);
-            }
-            break;
+		case 'n': /* DSR -- Device Status Report */
+			switch (csiescseq.arg[0]) {
+				case 5: /* Status Report "OK" `0n` */
+					ttywrite("\033[0n", sizeof("\033[0n") - 1, 0);
+					break;
+				case 6: /* Report Cursor Position (CPR) "<row>;<column>R" */
+					len = snprintf(buf, sizeof(buf), "\033[%i;%iR",
+			               term.c.y+1, term.c.x+1);
+					ttywrite(buf, len, 0);
+					break;
+				default:
+					goto unknown;
+			}
+		break;
         case 'r': /* DECSTBM -- Set Scrolling Region */
             if (csiescseq.priv) {
                 goto unknown;
@@ -1605,6 +1610,7 @@ int SimpleTerminal::eschandle(uchar ascii) {
         case 'c': /* RIS -- Reset to initial state */
             treset();
             xloadcols();
+            xsetmode(0, MODE_HIDE);
             break;
         case '=': /* DECPAM -- Application keypad */
             // TODO xsetmode(1, MODE_APPKEYPAD);
@@ -1754,20 +1760,27 @@ char *SimpleTerminal::getsel(void) {
     return str;
 }
 
-void SimpleTerminal::osc_color_response(int index, int num) {
+void SimpleTerminal::osc_color_response(int num, int index, int is_osc4) {
     int n;
     char buf[32];
     unsigned char r, g, b;
 
-    if (xgetcolor(index, &r, &g, &b)) {
-        fprintf(stderr, "erresc: failed to fetch osc color %d\n", index);
-        return;
-    }
+	if (xgetcolor(is_osc4 ? num : index, &r, &g, &b)) {
+		fprintf(stderr, "erresc: failed to fetch %s color %d\n",
+		        is_osc4 ? "osc4" : "osc",
+		        is_osc4 ? num : index);
+		return;
+	}
 
-    n = snprintf(buf, sizeof buf, "\033]%d;rgb:%02x%02x/%02x%02x/%02x%02x\007",
-                 num, r, r, g, g, b, b);
-
-    ttywrite(buf, n, 1);
+	n = snprintf(buf, sizeof buf, "\033]%s%d;rgb:%02x%02x/%02x%02x/%02x%02x\007",
+	             is_osc4 ? "4;" : "", num, r, r, g, g, b, b);
+	if (n < 0 || n >= sizeof(buf)) {
+		fprintf(stderr, "error: %s while printing %s response\n",
+		        n < 0 ? "snprintf failed" : "truncation occurred",
+		        is_osc4 ? "osc4" : "osc");
+	} else {
+		ttywrite(buf, n, 1);
+	}
 }
 
 void SimpleTerminal::redraw(void) {
@@ -1813,26 +1826,9 @@ char *SimpleTerminal::base64dec(const char *src) {
 }
 
 char SimpleTerminal::base64dec_getc(const char **src) {
-    while (**src && !isprint(**src))
+	while (**src && !isprint((unsigned char)**src))
         (*src)++;
     return **src ? *((*src)++) : '=';  /* emulate padding if string ends */
-}
-
-
-void SimpleTerminal::osc4_color_response(int num) {
-    int n;
-    char buf[32];
-    unsigned char r, g, b;
-
-    if (xgetcolor(num, &r, &g, &b)) {
-        emit s_error("erresc: failed to fetch osc4 color: " + QString::number(num));
-        return;
-    }
-
-    n = snprintf(buf, sizeof buf, "\033]4;%d;rgb:%02x%02x/%02x%02x/%02x%02x\007",
-                 num, r, r, g, g, b, b);
-
-    ttywrite(buf, n, 1);
 }
 
 void SimpleTerminal::selsnap(int *x, int *y, int direction) {
@@ -2275,6 +2271,7 @@ void SimpleTerminal::xloadcols() {
 int SimpleTerminal::xsetcursor(int cursor) {
     // TODO
     // qDebug() << "xsetcursor";
+    return 0;
 }
 
 void SimpleTerminal::tprinter(char *s, size_t len) {

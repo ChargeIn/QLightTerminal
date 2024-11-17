@@ -188,7 +188,7 @@ private:
 
     void tfulldirt(void);
 
-    void osc_color_response(int index, int num);
+    void osc_color_response(int num, int index, int is_osc4);
 
     void redraw(void);
 
@@ -197,8 +197,6 @@ private:
     char *base64dec(const char *src);
 
     char base64dec_getc(const char **src);
-
-    void osc4_color_response(int num);
 
     void tsetattr(const int *attr, int l);
 
